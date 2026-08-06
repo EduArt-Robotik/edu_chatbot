@@ -1,0 +1,12 @@
+# Misc
+.devcontainer
+
+# Knowledge base
+knowledge/*
+
+# Database
+chroma/db/*
+
+# LLM
+ollama/models/*
+

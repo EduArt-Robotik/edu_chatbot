@@ -1,0 +1,134 @@
+services:
+  ollama:
+    image: edu_ollama:latest
+    build:
+      context: ./ollama
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama/models:/root/.ollama
+    environment:
+      IS_PERSISTENT: "TRUE"
+      OLLAMA_IGPU_ENABLE: "1"
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  ollama-update:
+    image: edu_ollama:latest
+    build:
+      context: ./ollama
+      dockerfile: ./Dockerfile
+    restart: "no"
+    profiles:
+      - update
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./ollama/models:/root/.ollama
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        ollama pull gemma4:e2b
+        ollama pull gemma4:e4b
+        ollama pull qwen3.5:2b
+        ollama pull qwen3.5:4b
+        ollama pull nomic-embed-text
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  chroma:
+    image: edu_chromadb:latest
+    build:
+      context: ./chroma
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma/db:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+      PERSIST_DIRECTORY: "/chroma/chroma"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  chroma-update:
+    build:
+      context: ./edu_chatbot_ros2
+      dockerfile: ./Dockerfile
+    image: edu_chatbot_ros2:latest
+    restart: "no"
+    profiles:
+      - update
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ros2 run edu_chatbot_ros2 update_db
+    depends_on:
+      ollama:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+
+  edu-chatbot:
+    build:
+      context: ./edu_chatbot_ros2
+      dockerfile: ./Dockerfile
+    image: edu_chatbot_ros2:latest
+    restart: unless-stopped
+    profiles:
+      - pipeline
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ros2 launch edu_chatbot_ros2 edu_chatbot.launch.py
+    depends_on:
+      ollama:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    profiles:
+      - tools
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  open-webui:
