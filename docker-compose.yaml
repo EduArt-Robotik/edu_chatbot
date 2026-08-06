@@ -11,10 +11,15 @@ services:
       - ./ollama/models:/root/.ollama
     environment:
       IS_PERSISTENT: "TRUE"
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_KEEP_ALIVE: "-1" # Keeps the models loaded in memory. Prevents unloading after a timeout.
       OLLAMA_IGPU_ENABLE: "1"
-    devices:
-      - /dev/kfd
-      - /dev/dri
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
       interval: 5s
@@ -49,7 +54,7 @@ services:
         condition: service_healthy
 
   chroma:
-    image: edu_chromadb:latest
+    image: edu_chroma:latest
     build:
       context: ./chroma
       dockerfile: ./Dockerfile
