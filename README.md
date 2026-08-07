@@ -1,6 +1,6 @@
 # EDU Chatbot
 
-Local RAG stack based on `ollama` and `chromadb` with ROS2 interface.
+Local RAG pipeline with a ROS2 interface based on `ollama` and `chromadb`.
 
 ## Component Interaction
 
@@ -122,7 +122,9 @@ docker compose --profile tools up -d
 docker compose stop open-webui
 ```
 
-## Ops
+## Monitoring and Testing
+
+Check container logs:
 
 ```bash
 docker compose ps
@@ -130,4 +132,27 @@ docker compose logs -f ollama
 docker compose logs -f chroma
 docker compose logs -f edu-chatbot
 docker compose down --remove-orphans
+```
+
+Check gpu access in container (Nvidia only):
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+Ollama API sample request:
+
+```bash
+docker exec -it edu_chatbot-ollama-1 bash
+
+curl http://localhost:11434/api/generate -d '{
+  "model": "gemma4:e2b",
+  "prompt": "Answer the following query in 1 to 3 sentences: Why is the sky blue?",
+  "stream": false,
+  "options": {
+    "temperature": 0.2,
+    "num_predict": 512,
+    "num_ctx": 2048
+  }
+}'
 ```
