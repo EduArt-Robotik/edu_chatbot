@@ -141,14 +141,35 @@ Check gpu access in container (Nvidia only):
 docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 ```
 
+Check loaded ollama models:
+```bash
+curl http://localhost:11434/api/tags
+```
+
 Ollama API sample request:
 
 ```bash
 docker exec -it edu_chatbot-ollama-1 bash
+```
 
+```bash
 curl http://localhost:11434/api/generate -d '{
   "model": "gemma4:e2b",
-  "prompt": "Answer the following query in 1 to 3 sentences: Why is the sky blue?",
+  "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
+  "stream": false,
+  "options": {
+    "temperature": 0.2
+  }
+}'
+```
+
+Define context token length and response token length.
+Will reload the model if size is different from before:
+
+```bash
+curl http://localhost:11434/api/generate -d '{
+  "model": "gemma4:e2b",
+  "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
   "stream": false,
   "options": {
     "temperature": 0.2,
@@ -157,3 +178,19 @@ curl http://localhost:11434/api/generate -d '{
   }
 }'
 ```
+
+## LLM Models
+
+Below are the tested LLM models.
+The response speed is measured with the above sample query.
+The rating is purely subjective.
+
+| Model          | Size   | Quantization | Time RPi5 | Time 4070  | Rating | Comment |
+|----------------|--------|--------------|-----------|------------|--------|---------|
+| gemma3:270m    | 292 MB | Q4_K_M       | 2.4s      | 1.9s       | 70%    | Feels usable on RPi5 |
+| gemma3:1b      | 815 MB | Q4_K_M       | 6.3s      | 2.7s       | 50%    | |
+| gemma4:e2b     | 7.2 GB | Q4_K_M       | Too large | 5.8s       | 1%     | |
+| qwen3.5:0.8b   | 1.0 GB | Q8_0         | 3m 8s     | 27s        | 0%     | |
+| qwen3.5:2b     | 2.7 GB | Q8_0         | Just no.  | 20s        | 0%     | |
+| llama3.2:1b    | 1.3 GB | Q8_0         | 9.7s      | 2.3s       | 20%    | |
+| ministral-3:3b | 3.0 GB |              |           |            |        | |
