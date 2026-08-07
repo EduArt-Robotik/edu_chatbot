@@ -2,6 +2,11 @@
 
 Local RAG pipeline with a ROS2 interface based on `ollama` and `chromadb`.
 
+## API Reference
+
+- [Ollama API](https://docs.ollama.com/api/introduction)
+- [ChromaDB API](https://docs.trychroma.com/reference/python/client#heartbeat)
+
 ## Component Interaction
 
 ```mermaid
@@ -30,7 +35,7 @@ end
 ROS["ROS2 Nodes"]
 UPDATE["ollama-update service<br/>fetch models"]
 
-subgraph RUNTIME["Online: Chatbot Runtime (profile: pipeline)"]
+subgraph RUNTIME["Online: Chatbot Runtime (profile: chatbot)"]
    
 
     CHATBOT["edu-chatbot<br/><br/>ros2 launch edu_chatbot edu_chatbot.launch.py<br/><br/>May be split in a generic service container and a ros bridge container in the future."]
@@ -78,7 +83,7 @@ Core services:
 
 Profile-based services:
 
-- `edu-chatbot` (profile `pipeline`): main ROS2 chatbot runtime.
+- `edu-chatbot` (profile `chatbot`): main ROS2 chatbot runtime.
 - `ollama-update` (profile `update`): pulls the configured model set into Ollama.
 - `chroma-update` (profile `update`): updates/rebuilds the knowledge DB.
 - `open-webui` (profile `tools`): optional browser UI for manual model/prompt checks.
@@ -96,56 +101,21 @@ Health endpoints:
 
 ## Commands
 
-Base infrastructure only:
+Start the pipeling:
 
-```bash
-docker compose up -d --build
-```
-
-Knowledge/model update:
-
-```bash
-docker compose --profile update up --build --abort-on-container-exit
-docker compose down --remove-orphans
-```
-
-Pipeline runtime:
-
-```bash
-docker compose --profile pipeline up -d --build
-docker compose stop edu-chatbot
-```
-
-Tools:
-
-```bash
-docker compose --profile tools up -d
-docker compose stop open-webui
-```
-
-GPU acceleration:
 ```bash
 # CPU
-docker compose up ollama
+docker compose up chatbot
 
 # NVIDIA
-docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up ollama
+docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up chatbot
 
 # AMD
-docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up ollama
+docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up chatbot
 ```
 
 ## Monitoring and Testing
 
-Check container logs:
-
-```bash
-docker compose ps
-docker compose logs -f ollama
-docker compose logs -f chroma
-docker compose logs -f edu-chatbot
-docker compose down --remove-orphans
-```
 
 Check gpu access in container (Nvidia only):
 
@@ -153,7 +123,7 @@ Check gpu access in container (Nvidia only):
 docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 ```
 
-Check loaded ollama models:
+Fetch available ollama models:
 ```bash
 curl http://localhost:11434/api/tags
 ```

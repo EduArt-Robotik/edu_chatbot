@@ -97,7 +97,7 @@ services:
     image: edu_chatbot_ros2:latest
     restart: unless-stopped
     profiles:
-      - pipeline
+      - chatbot
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
