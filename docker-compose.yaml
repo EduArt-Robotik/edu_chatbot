@@ -38,17 +38,16 @@ services:
     environment:
       - OLLAMA_HOST=http://ollama:11434
     volumes:
-      - ollama-models:/root/.ollama
+      - ./ollama/models.txt:/models.txt:ro
     entrypoint:
       - /bin/sh
       - -c
       - |
         set -eu
-        ollama pull gemma4:e2b
-        ollama pull gemma4:e4b
-        ollama pull qwen3.5:2b
-        ollama pull qwen3.5:4b
-        ollama pull nomic-embed-text
+        grep -v '^\s*#' /models.txt | grep -v '^\s*$$' | while read -r model; do
+          echo "Pulling $$model..."
+          ollama pull "$$model"
+        done
     depends_on:
       ollama:
         condition: service_healthy
