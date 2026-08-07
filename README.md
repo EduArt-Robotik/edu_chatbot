@@ -14,14 +14,11 @@ flowchart TB
 subgraph OFFLINE["Offline: Knowledge Base Build (profile: update)"]
     DOCS["Local Knowledge Base<br/><br/>pdf, txt, md, docx<br/><br/>directory ./knowledge/documents"]
     
-    INGEST["chroma-update service"]
-    
-    EMBED["ollama<br/>nomic-embed-text"]
+    EMBED["chroma-update service<br/>ollama: nomic-embed-text"]
     
     CHROMA["chroma<br/>Persistent Vector Store<br/><br/>- embeddings<br/>- chunks<br/>- metadata"]
 
-    DOCS --> INGEST
-    INGEST --> EMBED
+    DOCS -->  EMBED
     EMBED --> CHROMA
 end
 
@@ -31,6 +28,7 @@ end
 %% =========================
 
 ROS["ROS2 Nodes"]
+UPDATE["ollama-update service<br/>fetch models"]
 
 subgraph RUNTIME["Online: Chatbot Runtime (profile: pipeline)"]
    
@@ -66,6 +64,9 @@ LLM --> CHATBOT
 
 CHATBOT -->|"ROS2 Service Response or<br/>Output Topic"| ROS
 
+LLM --> UPDATE
+
+UPDATE --> LLM
 ```
 
 ## Services
