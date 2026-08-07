@@ -1,11 +1,27 @@
-FROM ros:jazzy-ros-core
+FROM ros:jazzy-ros-base
 
-USER ubuntu
+ENV USER=user
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Rename the current user
+RUN usermod -l $USER ubuntu \
+  && groupmod -n $USER ubuntu \
+  && usermod -d /home/$USER -m $USER \
+  && usermod -c "user" $USER \
+  && echo "$USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USER \
+  && chmod 0440 /etc/sudoers.d/$USER
+
+USER root
 
 # Install packages
-RUN export DEBIAN_FRONTEND=noninteractive
 #RUN apt-get update \
 # && apt-get install -y --no-install-recommends
+
+# Save some space in the final image
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# User space configuration
+USER $USER
 
 # Activate color output in terminal
 RUN echo "export ENV TERM=xterm-256color" >> /home/$USER/.bashrc \
@@ -16,9 +32,6 @@ ENV color_prompt=yes
 
 # Source ROS files
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /home/$USER/.bashrc
-
-# Save some space in the final image
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Add entry point
 #COPY --chown=$USER entrypoint /home/$USER/

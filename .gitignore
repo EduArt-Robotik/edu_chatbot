@@ -10,3 +10,9 @@ chroma/db/*
 # LLM
 ollama/models/*
 
+# ROS2
+log/
+build/
+install/
+__pycache__/
+*.py[cod]

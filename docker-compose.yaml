@@ -103,7 +103,7 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
     volumes:
-      - ./edu_chatbot_ros2:/home/ubuntu/ros2_ws/src/edu_chatbot_ros2
+      - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
     #entrypoint:
     #  - /bin/sh
     #  - -c
