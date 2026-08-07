@@ -8,7 +8,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ./ollama/models:/root/.ollama
+      - ollama-models:/root/.ollama
     environment:
       IS_PERSISTENT: "TRUE"
       OLLAMA_NO_CLOUD: "1"
@@ -38,7 +38,7 @@ services:
     environment:
       - OLLAMA_HOST=http://ollama:11434
     volumes:
-      - ./ollama/models:/root/.ollama
+      - ollama-models:/root/.ollama
     entrypoint:
       - /bin/sh
       - -c
@@ -62,7 +62,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./chroma/db:/chroma/chroma
+      - chroma-db:/chroma/chroma
     environment:
       IS_PERSISTENT: "TRUE"
       ANONYMIZED_TELEMETRY: "FALSE"
@@ -128,6 +128,7 @@ services:
     profiles:
       - tools
     environment:
+      WEBUI_AUTH: "FALSE"
       OLLAMA_BASE_URL: http://ollama:11434
     volumes:
       - open-webui:/app/backend/data
@@ -136,4 +137,6 @@ services:
         condition: service_healthy
 
 volumes:
+  chroma-db:
   open-webui:
+  ollama-models:
