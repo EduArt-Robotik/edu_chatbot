@@ -123,6 +123,18 @@ docker compose --profile tools up -d
 docker compose stop open-webui
 ```
 
+GPU acceleration:
+```bash
+# CPU
+docker compose up ollama
+
+# NVIDIA
+docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up ollama
+
+# AMD
+docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up ollama
+```
+
 ## Monitoring and Testing
 
 Check container logs:
@@ -154,7 +166,7 @@ docker exec -it edu_chatbot-ollama-1 bash
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "gemma4:e2b",
+  "model": "gemma3:270m",
   "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
   "stream": false,
   "options": {
@@ -168,7 +180,7 @@ Will reload the model if size is different from before:
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "gemma4:e2b",
+  "model": "gemma3:270m",
   "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
   "stream": false,
   "options": {
