@@ -14,10 +14,14 @@ RUN usermod -l $USER ubuntu \
 USER root
 
 # Install packages
-#RUN apt-get update \
-# && apt-get install -y --no-install-recommends
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  python3-pip
 
-# Save some space in the final image
+RUN pip install --break-system-packages --ignore-installed \
+    ollama \
+    chromadb
+
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # User space configuration
@@ -31,7 +35,9 @@ ENV TERM=xterm-256color
 ENV color_prompt=yes
 
 # Source ROS files
-RUN echo "source /opt/ros/jazzy/setup.bash" >> /home/$USER/.bashrc
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
+
+WORKDIR /home/$USER/ros2_ws
 
 # Add entry point
 #COPY --chown=$USER entrypoint /home/$USER/
