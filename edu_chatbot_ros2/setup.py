@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'database_update = edu_chatbot_ros2.database_update:main',
             'edu_chatbot_node = edu_chatbot_ros2.edu_chatbot_node:main'
         ],
     },
