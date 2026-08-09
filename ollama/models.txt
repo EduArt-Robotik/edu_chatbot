@@ -3,13 +3,13 @@
 
 llama3.2:1b
 
-qwen3.5:0.8b
+#qwen3.5:0.8b
 #qwen3.5:2b
 #qwen3.5:4b
 
 gemma3:270m
-#gemma3:1b
+gemma3:1b
 #gemma4:e2b
 #gemma4:e4b
 
-#nomic-embed-text
+nomic-embed-text
