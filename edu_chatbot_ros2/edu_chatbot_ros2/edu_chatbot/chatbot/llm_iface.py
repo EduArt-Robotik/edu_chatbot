@@ -3,6 +3,22 @@ from abc import ABC, abstractmethod
 
 class LlmIface(ABC):
   """Abstract interface for LLM providers."""
+  def __init__(
+    self,
+    model: str = None,
+    temperature: float = None
+  ):
+    self.model = model
+    self.temperature = temperature
+
+  @abstractmethod
+  def ping(self) -> bool:
+    """Test the connection to the LLM service.
+    
+    Returns:
+        True if the connection is successful, False otherwise.
+    """
+    pass
 
   @abstractmethod
   def generate(self, prompt: str) -> str:
@@ -17,10 +33,13 @@ class LlmIface(ABC):
     pass
 
   @abstractmethod
-  def ping(self) -> bool:
-    """Test the connection to the LLM service.
+  def embed(self, context: str) -> str:
+    """Generate an embedding for the given context.
     
+    Args:
+        context: The input context to generate an embedding for.
+        
     Returns:
-        True if the connection is successful, False otherwise.
+        The generated embedding as a string.
     """
     pass

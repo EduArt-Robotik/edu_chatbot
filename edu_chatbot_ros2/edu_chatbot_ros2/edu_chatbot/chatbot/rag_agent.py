@@ -53,25 +53,28 @@ class RagAgent:
   def database(self) -> DatabaseIface:
     return self._database
 
-  def ping(self) -> bool:
+  def is_healthy(self) -> bool:
     """Test connections to both LLM and database services."""
     return self._llm.ping() and self._database.ping()
 
   def generate_prompt(self, query: str, context: str = None) -> str:
+    """Generate a RAG prompt for the LLM based on the query and optional context."""
     if context:
       return f'{self._model_personality}\n{self._answer_instructions}\nQuery: {query}\n{self._rag_instructions}\nContext: {context}'
     else:
       return f'{self._model_personality}\n{self._answer_instructions}\nQuery: {query}'
 
   def query(self, query: str, context: str = None) -> str:
-    """Generate a response for the given query using the LLM.
-    
-    Args:
-        query: The user's query.
-        context: Optional context for RAG.
-        
-    Returns:
-        The generated response text.
-    """
+    """Generate a response for the given query using the LLM."""
+    prompt = self.generate_prompt(query=query, context=context)
+    return self._llm.generate(prompt=prompt)
+  
+  def query_llm(self, query: str, context: str = None) -> str:
+    """Generate a response for the given query using the LLM."""
+    prompt = self.generate_prompt(query=query, context=context)
+    return self._llm.generate(prompt=prompt)
+
+  def query_rag(self, query: str, context: str = None) -> str:
+    """Generate a response for the given query using the RAG pipeline."""
     prompt = self.generate_prompt(query=query, context=context)
     return self._llm.generate(prompt=prompt)

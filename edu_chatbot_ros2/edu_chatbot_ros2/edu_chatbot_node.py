@@ -29,7 +29,7 @@ class EduChatbotNode(Node):
     self.get_logger().debug(f'Received message: {msg.data}')
 
     try:
-      response = self.rag_agent.query(query=msg.data)
+      response = self.rag_agent.query_llm(query=msg.data)
 
       response_msg = String()
       response_msg.data = response
