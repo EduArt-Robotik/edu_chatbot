@@ -103,6 +103,7 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
     volumes:
+      - chatbot_ws:/home/user/ros2_ws
       - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
     #entrypoint:
     #  - /bin/sh
@@ -136,9 +137,10 @@ services:
 
 volumes:
   chroma-db:
+  chatbot_ws:
   open-webui:
   ollama-models:
-
+  
 networks:
   default:
     name: edu_chatbot_network
