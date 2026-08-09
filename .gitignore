@@ -2,7 +2,7 @@
 .devcontainer
 
 # Knowledge base
-knowledge/*
+database/*
 
 # Database
 chroma/db/*
