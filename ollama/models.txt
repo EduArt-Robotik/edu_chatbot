@@ -2,6 +2,7 @@
 # Comment out lines with # to disable a model
 
 llama3.2:1b
+llama3.2:3b
 
 #qwen3.5:0.8b
 #qwen3.5:2b
