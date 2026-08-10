@@ -33,15 +33,8 @@ services:
       OLLAMA_HOST: "http://ollama:11434"
     volumes:
       - ./ollama/models.txt:/models.txt:ro
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -eu
-        grep -v '^\s*#' /models.txt | grep -v '^\s*$$' | while read -r model; do
-          echo "Pulling $$model..."
-          ollama pull "$$model"
-        done
+      - ./ollama/update_models.sh:/update_models.sh:ro
+    entrypoint: ["/bin/bash", "/update_models.sh"]
     depends_on:
       ollama:
         condition: service_healthy
