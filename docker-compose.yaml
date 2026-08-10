@@ -91,7 +91,7 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "--log-level", "debug"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:

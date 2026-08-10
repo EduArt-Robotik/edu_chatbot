@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 class OllamaLlm(LlmIface):
   """Ollama implementation of the LLM interface."""
 
-  def __init__(self, model: str = DEFAULT_LLM_MODEL, temperature: float = DEFAULT_LLM_TEMPERATURE):
+  def __init__(self, model: str = DEFAULT_LLM_MODEL, temperature: float = DEFAULT_LLM_TEMPERATURE, embedding_model: str = DEFAULT_EMBEDDING_MODEL):
     super().__init__(model, temperature)
+    self._embedding_model = embedding_model
 
   def ping(self) -> bool:
     """Test the connection to the Ollama server."""
@@ -44,7 +45,7 @@ class OllamaLlm(LlmIface):
   def embed(self, context: str) -> list[float]:
     """Generate an embedding using Ollama."""
     try:
-        response: EmbedResponse = embed(model=DEFAULT_EMBEDDING_MODEL, input=context)
+        response: EmbedResponse = embed(model=self._embedding_model, input=context)
     except Exception as e:
         logger.error(f'Failed to generate embedding: {e}')
         raise
