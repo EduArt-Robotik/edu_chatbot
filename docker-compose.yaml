@@ -71,10 +71,8 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
     volumes:
-      - chatbot_ws:/home/user/ros2_ws
       - ./database:/home/user/database
-      - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
-    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --symlink-install && source install/setup.bash && ros2 run edu_chatbot_ros2 update_database_node"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "database_update_node"]
     depends_on:
       ollama:
         condition: service_healthy
@@ -93,10 +91,7 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
-    volumes:
-      - chatbot_ws:/home/user/ros2_ws
-      - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
-    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --symlink-install && source install/setup.bash && ros2 run edu_chatbot_ros2 edu_chatbot_node --ros-args --log-level debug"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:
@@ -123,7 +118,6 @@ services:
 
 volumes:
   chroma-db:
-  chatbot_ws:
   open-webui:
   ollama-models:
   
