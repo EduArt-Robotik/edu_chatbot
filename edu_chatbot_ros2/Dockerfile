@@ -20,7 +20,10 @@ RUN apt-get update \
 
 RUN pip install --break-system-packages --ignore-installed \
     ollama \
-    chromadb
+    chromadb \
+    llama-index-core \
+    llama-index-embeddings-ollama \
+    llama-index-vector-stores-chroma
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -34,12 +37,17 @@ RUN echo "export TERM=xterm-256color" >> /home/$USER/.bashrc \
 ENV TERM=xterm-256color
 ENV color_prompt=yes
 
+# Set up ROS workspace and build the package
+RUN mkdir -p /home/$USER/ros2_ws/src
+WORKDIR /home/$USER/ros2_ws
+COPY --chown=$USER . /home/$USER/ros2_ws/src/edu_chatbot_ros2
+RUN bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
+
 # Source ROS files
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
-
-WORKDIR /home/$USER/ros2_ws
+RUN echo "source ~/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
 
 # Add entry point
-#COPY --chown=$USER entrypoint /home/$USER/
-#RUN chmod a+x /home/$USER/entrypoint
-#ENTRYPOINT [ "/home/user/entrypoint" ]
+COPY --chown=$USER ./docker/entrypoint /home/$USER/
+RUN chmod a+x /home/$USER/entrypoint
+ENTRYPOINT [ "/home/user/entrypoint" ]

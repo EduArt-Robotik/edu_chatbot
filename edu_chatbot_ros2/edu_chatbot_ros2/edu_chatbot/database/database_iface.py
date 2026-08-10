@@ -4,10 +4,10 @@ from dataclasses import dataclass
 @dataclass
 class DatabaseEntry:
   """Represents a single entry in the database."""
-  id: str = 0
+  id: str = ''
   document: str = ''
   embedding: list = None
-  metadata: str = ''
+  metadata: dict = None
 
 
 class DatabaseIface(ABC):

@@ -1,5 +1,5 @@
 import logging
-from ollama import list, ListResponse
+from ollama import list as ollama_list, ListResponse
 from ollama import generate, GenerateResponse
 from ollama import embed, EmbedResponse
 from datetime import datetime
@@ -22,7 +22,7 @@ class OllamaLlm(LlmIface):
   def ping(self) -> bool:
     """Test the connection to the Ollama server."""
     try:
-        response: ListResponse = list()
+        response: ListResponse = ollama_list()
         return True
     except Exception as e:
         logger.error(f'Failed to ping Ollama server: {e}')
@@ -41,11 +41,11 @@ class OllamaLlm(LlmIface):
     return response.response
 
 
-  def embed(self, context: str) -> str:
+  def embed(self, context: str) -> list[float]:
     """Generate an embedding using Ollama."""
     try:
-        response: EmbedResponse = embed(model=DEFAULT_EMBEDDING_MODEL, prompt=context)
+        response: EmbedResponse = embed(model=DEFAULT_EMBEDDING_MODEL, input=context)
     except Exception as e:
         logger.error(f'Failed to generate embedding: {e}')
         raise
-    return response.embeddings
+    return response.embeddings[0]

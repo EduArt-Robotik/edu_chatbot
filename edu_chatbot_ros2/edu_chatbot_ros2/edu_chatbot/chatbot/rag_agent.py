@@ -1,24 +1,27 @@
+import logging
+
 from .llm_iface import LlmIface
-from ..database.database_iface import DatabaseIface
+from ..database.database_iface import DatabaseIface, DatabaseEntry
 
-DEFAULT_MODEL_PERSONALITY   = 'You are a helpful and concise fair exhibition chatbot.'
-DEFAULT_ANSWER_INSTRUCTIONS = 'Answer the following query concisely in 1 to 3 sentences providing accurate information. Provide a plain text answer.'
-DEFAULT_RAG_INSTRUCTIONS    = 'Use the following context to answer the query. Answer with "I don\'t know" if the answer is not contained in the context.'
+logger = logging.getLogger(__name__)
 
+DEFAULT_MODEL_PERSONALITY = 'Answer politely in 1 - 3 sentences.'
+DEFAULT_RAG_INSTRUCTIONS  = 'Use ONLY the provided context to answer the query. If the information is not present in the context, say "I don\'t know".'
+DEFAULT_TOP_K = 3
 
 class RagAgent:
   def __init__(
     self,
     llm: LlmIface,
+    embedder: LlmIface,
     database: DatabaseIface,
     model_personality: str = DEFAULT_MODEL_PERSONALITY,
-    answer_instructions: str = DEFAULT_ANSWER_INSTRUCTIONS,
     rag_instructions: str = DEFAULT_RAG_INSTRUCTIONS
   ):
     self._llm = llm
+    self._embedder = embedder
     self._database = database
     self._model_personality = model_personality
-    self._answer_instructions = answer_instructions
     self._rag_instructions = rag_instructions
 
   @property
@@ -28,14 +31,6 @@ class RagAgent:
   @model_personality.setter
   def model_personality(self, value: str):
     self._model_personality = value
-
-  @property
-  def answer_instructions(self) -> str:
-    return self._answer_instructions
-
-  @answer_instructions.setter
-  def answer_instructions(self, value: str):
-    self._answer_instructions = value
 
   @property
   def rag_instructions(self) -> str:
@@ -60,21 +55,28 @@ class RagAgent:
   def generate_prompt(self, query: str, context: str = None) -> str:
     """Generate a RAG prompt for the LLM based on the query and optional context."""
     if context:
-      return f'{self._model_personality}\n{self._answer_instructions}\nQuery: {query}\n{self._rag_instructions}\nContext: {context}'
+      return f'{self._model_personality} {self._rag_instructions}\nContext: {context}\nQuery: {query}'
     else:
-      return f'{self._model_personality}\n{self._answer_instructions}\nQuery: {query}'
+      return f'{self._model_personality}\nQuery: {query}'
 
-  def query(self, query: str, context: str = None) -> str:
-    """Generate a response for the given query using the LLM."""
+  def query_llm(self, query: str, context: str = None) -> tuple[str, str]:
+    """Generate a response for the given query using the LLM (without RAG)."""
     prompt = self.generate_prompt(query=query, context=context)
-    return self._llm.generate(prompt=prompt)
-  
-  def query_llm(self, query: str, context: str = None) -> str:
-    """Generate a response for the given query using the LLM."""
-    prompt = self.generate_prompt(query=query, context=context)
-    return self._llm.generate(prompt=prompt)
+    return self._llm.generate(prompt=prompt), prompt
 
-  def query_rag(self, query: str, context: str = None) -> str:
+  def query_rag(self, query: str, top_k: int = DEFAULT_TOP_K) -> tuple[str, str]:
     """Generate a response for the given query using the RAG pipeline."""
+    
+    # Embed the query using the LLM's embedding function
+    query_embedding = self._embedder.embed(query)
+    
+    # Retrieve relevant chunks from vector store
+    results = self._database.query(query_embedding=query_embedding, top_k=top_k)
+
+    # Extract text from retrieved entries and combine into context
+    context_chunks = [entry.document for entry in results]
+    context = '\n\n'.join(context_chunks)
+
+    # Generate response with retrieved context
     prompt = self.generate_prompt(query=query, context=context)
-    return self._llm.generate(prompt=prompt)
+    return self._llm.generate(prompt=prompt), prompt

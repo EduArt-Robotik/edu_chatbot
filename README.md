@@ -161,6 +161,16 @@ curl http://localhost:11434/api/generate -d '{
 }'
 ```
 
+ROS test commands:
+
+```bash
+ros2 topic pub /rag/input std_msgs/msg/String 'data: "How can a EduArt robot be programmed?"' -1
+```
+```bash
+ros2 topic echo /rag/output --full-length
+```
+
+
 ## LLM Models
 
 Below are the tested LLM models.

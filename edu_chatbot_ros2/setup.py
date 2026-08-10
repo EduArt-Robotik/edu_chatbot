@@ -4,7 +4,7 @@ package_name = 'edu_chatbot_ros2'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='0.1.0',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -24,8 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'database_update = edu_chatbot_ros2.database_update:main',
-            'edu_chatbot_node = edu_chatbot_ros2.edu_chatbot_node:main'
+            'edu_chatbot_node = edu_chatbot_ros2.edu_chatbot_node:main',
+            'database_update_node = edu_chatbot_ros2.database_update_node:main'
         ],
     },
 )

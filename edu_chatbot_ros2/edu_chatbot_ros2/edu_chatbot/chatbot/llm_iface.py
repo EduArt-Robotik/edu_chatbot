@@ -33,13 +33,13 @@ class LlmIface(ABC):
     pass
 
   @abstractmethod
-  def embed(self, context: str) -> str:
+  def embed(self, context: str) -> list[float]:
     """Generate an embedding for the given context.
     
     Args:
         context: The input context to generate an embedding for.
         
     Returns:
-        The generated embedding as a string.
+        The generated embedding as a list of floats.
     """
     pass
