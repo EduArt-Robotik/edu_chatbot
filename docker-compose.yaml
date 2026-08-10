@@ -30,7 +30,7 @@ services:
     profiles:
       - update
     environment:
-      - OLLAMA_HOST=http://ollama:11434
+      OLLAMA_HOST: "http://ollama:11434"
     volumes:
       - ./ollama/models.txt:/models.txt:ro
     entrypoint:
@@ -55,11 +55,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - chroma-db:/chroma/chroma
+      - chroma-db:/data
     environment:
-      IS_PERSISTENT: "TRUE"
       ANONYMIZED_TELEMETRY: "FALSE"
-      PERSIST_DIRECTORY: "/chroma/chroma"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
       interval: 5s
@@ -67,7 +65,7 @@ services:
       retries: 5
       start_period: 60s
 
-  chroma-update:
+  edu-chatbot-update:
     build:
       context: ./edu_chatbot_ros2
       dockerfile: ./Dockerfile
@@ -79,11 +77,11 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        ros2 run edu_chatbot_ros2 update_db
+    volumes:
+      - chatbot_ws:/home/user/ros2_ws
+      - ./database:/home/user/database
+      - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
+    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --symlink-install && source install/setup.bash && ros2 run edu_chatbot_ros2 update_database_node"]
     depends_on:
       ollama:
         condition: service_healthy
@@ -105,12 +103,7 @@ services:
     volumes:
       - chatbot_ws:/home/user/ros2_ws
       - ./edu_chatbot_ros2:/home/user/ros2_ws/src/edu_chatbot_ros2
-    #entrypoint:
-    #  - /bin/sh
-    #  - -c
-    #  - |
-    #    ros2 launch edu_chatbot_ros2 edu_chatbot.launch.py
-    command: ""
+    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --symlink-install && source install/setup.bash && ros2 run edu_chatbot_ros2 edu_chatbot_node --ros-args --log-level debug"]
     stdin_open: true
     tty: true
     depends_on:
