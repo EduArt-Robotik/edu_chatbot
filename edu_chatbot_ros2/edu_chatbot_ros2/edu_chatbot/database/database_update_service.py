@@ -17,8 +17,9 @@ DEFAULT_OLLAMA_BASE_URL = os.environ.get('OLLAMA_HOST', 'http://localhost:11434'
 DEFAULT_CHROMA_HOST = os.environ.get('CHROMA_HOST', 'localhost')
 DEFAULT_CHROMA_PORT = int(os.environ.get('CHROMA_PORT', '8000'))
 
-# ChromaDB max batch size is 5461, use a safe value below that
-CHROMA_BATCH_SIZE = 5000
+# ChromaDB HTTP client has payload size limits. With embeddings (~3KB each)
+# plus metadata, batch size of 100 keeps payloads under typical limits.
+CHROMA_BATCH_SIZE = 100
 
 
 class DatabaseUpdateService:
