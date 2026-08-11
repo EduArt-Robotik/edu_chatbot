@@ -19,7 +19,7 @@ flowchart TB
 subgraph OFFLINE["Offline: Knowledge Base Build (profile: update)"]
     DOCS["Local Knowledge Base<br/><br/>pdf, txt, md, docx<br/><br/>directory ./knowledge/documents"]
     
-    EMBED["chroma-update service<br/>ollama: nomic-embed-text"]
+    EMBED["edu-chatbot-database-update service<br/>edu-chatbot-llm: nomic-embed-text"]
     
     CHROMA["chroma<br/>Persistent Vector Store<br/><br/>- embeddings<br/>- chunks<br/>- metadata"]
 
@@ -33,18 +33,18 @@ end
 %% =========================
 
 ROS["ROS2 Nodes"]
-UPDATE["ollama-update service<br/>fetch models"]
+UPDATE["edu-chatbot-llm-update service<br/>fetch models"]
 
 subgraph RUNTIME["Online: Chatbot Runtime (profile: chatbot)"]
    
 
-    CHATBOT["edu-chatbot<br/><br/>ros2 launch edu_chatbot edu_chatbot.launch.py<br/><br/>May be split in a generic service container and a ros bridge container in the future."]
+    CHATBOT["edu-chatbot-node<br/><br/>ros2 run edu_chatbot_ros2 edu_chatbot_node<br/><br/>May be split in a generic service container and a ros bridge container in the future."]
 
-    QEMBED["ollama<br/>nomic-embed-text<br/><br/>Embed user query"]
+    QEMBED["edu-chatbot-llm<br/>nomic-embed-text<br/><br/>Embed user query"]
 
     SEARCH["Vector Search"]
 
-    LLM["ollama<br/><br/>gemma4 / qwen3.5"]
+    LLM["edu-chatbot-llm<br/><br/>gemma4 / qwen3.5"]
 
 end
 
@@ -78,15 +78,15 @@ UPDATE --> LLM
 
 Core services:
 
-- `ollama`: local model runtime for generation and embeddings; persistent model cache in `./ollama/models`.
-- `chroma`: local vector database for document chunks and embeddings; persistent data in `./chroma/db`.
+- `edu-chatbot-llm`: local model runtime for generation and embeddings; persistent model cache in Docker volume `llm-models`.
+- `edu-chatbot-database`: local vector database for document chunks and embeddings; persistent data in Docker volume `database-core`.
 
 Profile-based services:
 
-- `edu-chatbot` (profile `chatbot`): main ROS2 chatbot runtime.
-- `ollama-update` (profile `update`): pulls the configured model set into Ollama.
-- `chroma-update` (profile `update`): updates/rebuilds the knowledge DB.
-- `open-webui` (profile `tools`): optional browser UI for manual model/prompt checks.
+- `edu-chatbot-node` (profile `chatbot`): main ROS2 chatbot runtime.
+- `edu-chatbot-llm-update` (profile `update`): pulls the configured model set into the LLM runtime.
+- `edu-chatbot-database-update` (profile `update`): updates/rebuilds the knowledge DB.
+- `edu-chatbot-webui` (profile `tools`): optional browser UI for manual model/prompt checks.
 
 ## Exposed Ports
 
@@ -105,13 +105,13 @@ Start the pipeling:
 
 ```bash
 # CPU
-docker compose up chatbot
+docker compose up edu-chatbot-node
 
 # NVIDIA
-docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up chatbot
+docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up edu-chatbot-node
 
 # AMD
-docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up chatbot
+docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up edu-chatbot-node
 ```
 
 ## Monitoring and Testing
@@ -131,7 +131,7 @@ curl http://localhost:11434/api/tags
 Ollama API sample request:
 
 ```bash
-docker exec -it edu_chatbot-ollama-1 bash
+docker compose exec edu-chatbot-llm bash
 ```
 
 ```bash
@@ -172,7 +172,7 @@ ros2 topic echo /rag/output --full-length
 
 Print all database chunks:
 ```bash
-python3 -c "import chromadb, json; client = chromadb.HttpClient(host='chroma', port=8000); col = client.get_collection('embeddings'); print(json.dumps(col.get(include=['documents']), indent=2))"
+python3 -c "import chromadb, json; client = chromadb.HttpClient(host='edu-chatbot-database', port=8000); col = client.get_collection('embeddings'); print(json.dumps(col.get(include=['documents']), indent=2))"
 ```
 
 ## LLM Models
