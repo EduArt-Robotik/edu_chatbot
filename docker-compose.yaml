@@ -74,7 +74,7 @@ services:
     volumes:
       - ./database:/home/user/database
       - database-cache:/home/user/data
-    command: ["ros2", "run", "edu_chatbot_ros2", "database_update_node"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "database_update_node", "--ros-args", "-p", "wipe_database:=false", "--ros-args", "--log-level", "info"]
     depends_on:
       edu-chatbot-llm:
         condition: service_healthy

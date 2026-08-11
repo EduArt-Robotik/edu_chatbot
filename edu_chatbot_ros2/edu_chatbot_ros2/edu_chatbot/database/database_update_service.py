@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 
 import chromadb
 from llama_index.core import SimpleDirectoryReader
@@ -63,17 +64,6 @@ class DatabaseUpdateService:
       cache=IngestionCache(),
     )
 
-    # Restore cached transformation outputs from disk when available.
-    # This prevents re-indexing unchanged chunks across container restarts.
-    if os.path.isdir(self._cache_path):
-      try:
-        self._pipeline.load(self._cache_path)
-        logger.info(f'Loaded ingestion cache from {self._cache_path}')
-      except Exception as e:
-        logger.warning(f'Failed to load ingestion cache from {self._cache_path}: {e}')
-    else:
-      logger.info(f'No ingestion cache found at {self._cache_path}; starting fresh')
-
   def ping(self) -> bool:
     """Test connections to ChromaDB and Ollama embedding service.
     
@@ -92,7 +82,21 @@ class DatabaseUpdateService:
       logger.error(f'Health check failed: {e}')
       return False
 
-  def update_database(self) -> tuple[int, int]:
+  def _wipe_database(self) -> None:
+    """Delete and recreate the target Chroma collection and reset ingestion cache."""
+    logger.warning(f'Wiping Chroma collection {self._collection_name} before ingestion')
+
+    # Reset Chroma collection.
+    self._chroma_client.delete_collection(name=self._collection_name)
+    self._chroma_collection = self._chroma_client.get_or_create_collection(name=self._collection_name)
+    self._vector_store = ChromaVectorStore(chroma_collection=self._chroma_collection)
+
+    # Reset ingestion cache in memory and on disk so all documents are re-embedded.
+    if os.path.isdir(self._cache_path):
+      shutil.rmtree(self._cache_path)
+      logger.info(f'Removed ingestion cache directory {self._cache_path}')
+
+  def update_database(self, wipe_database: bool = False) -> tuple[int, int]:
     """
     Load documents from the database path, chunk, embed, and store them.
 
@@ -103,6 +107,18 @@ class DatabaseUpdateService:
     Returns:
         Tuple of (total_documents_processed, total_nodes_created)
     """
+    if wipe_database:
+      self._wipe_database()
+    else:
+      if os.path.isdir(self._cache_path):
+        try:
+          self._pipeline.load(self._cache_path)
+          logger.info(f'Loaded ingestion cache from {self._cache_path}')
+        except Exception as e:
+          logger.warning(f'Failed to load ingestion cache from {self._cache_path}: {e}')
+      else:
+        logger.info(f'No ingestion cache found at {self._cache_path}; starting fresh')
+
     # Load all documents from the directory
     reader = SimpleDirectoryReader(
       input_dir=self._database_path,
