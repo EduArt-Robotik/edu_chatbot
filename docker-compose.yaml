@@ -1,5 +1,5 @@
 services:
-  ollama:
+  edu-chatbot-llm:
     image: edu_ollama:latest
     build:
       context: ./ollama
@@ -8,7 +8,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama-models:/root/.ollama
+      - llm-models:/root/.ollama
     environment:
       IS_PERSISTENT: "TRUE"
       OLLAMA_NO_CLOUD: "1"
@@ -21,7 +21,7 @@ services:
       retries: 5
       start_period: 60s
 
-  ollama-update:
+  edu-chatbot-llm-update:
     image: edu_ollama:latest
     build:
       context: ./ollama
@@ -30,16 +30,16 @@ services:
     profiles:
       - update
     environment:
-      OLLAMA_HOST: "http://ollama:11434"
+      OLLAMA_HOST: "http://edu-chatbot-llm:11434"
     volumes:
       - ./ollama/models.txt:/models.txt:ro
       - ./ollama/update_models.sh:/update_models.sh:ro
     entrypoint: ["/bin/bash", "/update_models.sh"]
     depends_on:
-      ollama:
+      edu-chatbot-llm:
         condition: service_healthy
 
-  chroma:
+  edu-chatbot-database:
     image: edu_chroma:latest
     build:
       context: ./chroma
@@ -48,7 +48,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - chroma-db:/data
+      - database-core:/data
     environment:
       ANONYMIZED_TELEMETRY: "FALSE"
     healthcheck:
@@ -58,7 +58,7 @@ services:
       retries: 5
       start_period: 60s
 
-  edu-chatbot-update:
+  edu-chatbot-database-update:
     build:
       context: ./edu_chatbot_ros2
       dockerfile: ./Dockerfile
@@ -67,21 +67,21 @@ services:
     profiles:
       - update
     environment:
-      - CHROMA_HOST=chroma
+      - CHROMA_HOST=edu-chatbot-database
       - CHROMA_PORT=8000
-      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_HOST=http://edu-chatbot-llm:11434
       - INGESTION_CACHE_PATH=/home/user/data
     volumes:
       - ./database:/home/user/database
       - database-cache:/home/user/data
     command: ["ros2", "run", "edu_chatbot_ros2", "database_update_node"]
     depends_on:
-      ollama:
+      edu-chatbot-llm:
         condition: service_healthy
-      chroma:
+      edu-chatbot-database:
         condition: service_healthy
 
-  edu-chatbot:
+  edu-chatbot-node:
     build:
       context: ./edu_chatbot_ros2
       dockerfile: ./Dockerfile
@@ -90,19 +90,19 @@ services:
     profiles:
       - chatbot
     environment:
-      - CHROMA_HOST=chroma
+      - CHROMA_HOST=edu-chatbot-database
       - CHROMA_PORT=8000
-      - OLLAMA_HOST=http://ollama:11434
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "--ros-args", "--log-level", "debug"]
+      - OLLAMA_HOST=http://edu-chatbot-llm:11434
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=3", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:
-      ollama:
+      edu-chatbot-llm:
         condition: service_healthy
-      chroma:
+      edu-chatbot-database:
         condition: service_healthy
 
-  open-webui:
+  edu-chatbot-webui:
     image: ghcr.io/open-webui/open-webui:main
     restart: unless-stopped
     ports:
@@ -111,17 +111,17 @@ services:
       - tools
     environment:
       WEBUI_AUTH: "FALSE"
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: http://edu-chatbot-llm:11434
     volumes:
       - open-webui:/app/backend/data
     depends_on:
-      ollama:
+      edu-chatbot-llm:
         condition: service_healthy
 
 volumes:
-  chroma-db:
   open-webui:
-  ollama-models:
+  llm-models:
+  database-core:
   database-cache:
   
 networks:

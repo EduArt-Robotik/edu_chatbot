@@ -1,4 +1,4 @@
 services:
-  ollama:
+  edu-chatbot-llm:
     devices:
       - /dev/dri:/dev/dri
