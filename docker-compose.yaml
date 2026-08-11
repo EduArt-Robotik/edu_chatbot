@@ -93,7 +93,7 @@ services:
       - CHROMA_HOST=edu-chatbot-database
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://edu-chatbot-llm:11434
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=3", "--ros-args", "--log-level", "debug"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:
