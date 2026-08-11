@@ -16,6 +16,7 @@ DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
 DEFAULT_OLLAMA_BASE_URL = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 DEFAULT_CHROMA_HOST = os.environ.get('CHROMA_HOST', 'localhost')
 DEFAULT_CHROMA_PORT = int(os.environ.get('CHROMA_PORT', '8000'))
+DEFAULT_INGESTION_CACHE_DIR = os.environ.get('INGESTION_CACHE_PATH', '/home/user/data')
 
 # ChromaDB HTTP client has payload size limits. With embeddings (~3KB each)
 # plus metadata, batch size of 100 keeps payloads under typical limits.
@@ -41,6 +42,7 @@ class DatabaseUpdateService:
   ):
     self._database_path = database_path
     self._collection_name = collection_name
+    self._cache_path = os.path.join(DEFAULT_INGESTION_CACHE_DIR, collection_name)
     
     # Initialize embedding model
     self._embed_model = OllamaEmbedding(model_name=embedding_model, base_url=ollama_base_url)
@@ -60,6 +62,17 @@ class DatabaseUpdateService:
       ],
       cache=IngestionCache(),
     )
+
+    # Restore cached transformation outputs from disk when available.
+    # This prevents re-indexing unchanged chunks across container restarts.
+    if os.path.isdir(self._cache_path):
+      try:
+        self._pipeline.load(self._cache_path)
+        logger.info(f'Loaded ingestion cache from {self._cache_path}')
+      except Exception as e:
+        logger.warning(f'Failed to load ingestion cache from {self._cache_path}: {e}')
+    else:
+      logger.info(f'No ingestion cache found at {self._cache_path}; starting fresh')
 
   def ping(self) -> bool:
     """Test connections to ChromaDB and Ollama embedding service.
@@ -97,7 +110,7 @@ class DatabaseUpdateService:
     )
     documents = reader.load_data(show_progress=True)
     
-    logger.info(f'Loaded {len(documents)} documents from {self._database_path}')
+    logger.info(f'Loaded {len(documents)} chunks from {self._database_path}')
 
     # Prepare documents for the vector store.
     for document in documents:
@@ -135,6 +148,14 @@ class DatabaseUpdateService:
     # Run ingestion pipeline.
     nodes = self._pipeline.run(documents=documents, show_progress=True)
     logger.info(f'Processed {len(nodes)} new/updated chunks')
+
+    # Persist cache so unchanged chunks are skipped in future runs.
+    try:
+      os.makedirs(self._cache_path, exist_ok=True)
+      self._pipeline.persist(self._cache_path)
+      logger.info(f'Successfully wrote ingestion cache to {self._cache_path}')
+    except Exception as e:
+      logger.warning(f'Failed to write ingestion cache to {self._cache_path}: {e}')
 
     # Optional safety check before writing to Chroma.
     for node in nodes:

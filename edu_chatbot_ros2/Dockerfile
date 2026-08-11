@@ -32,6 +32,9 @@ RUN pip install --break-system-packages --ignore-installed \
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Set permissions for the cache directory
+RUN mkdir -p /home/user/data && chown -R user:user /home/user/data
+
 # User space configuration
 USER $USER
 

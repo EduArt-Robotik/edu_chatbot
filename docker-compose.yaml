@@ -70,8 +70,10 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://ollama:11434
+      - INGESTION_CACHE_PATH=/home/user/data
     volumes:
       - ./database:/home/user/database
+      - database-cache:/home/user/data
     command: ["ros2", "run", "edu_chatbot_ros2", "database_update_node"]
     depends_on:
       ollama:
@@ -120,6 +122,7 @@ volumes:
   chroma-db:
   open-webui:
   ollama-models:
+  database-cache:
   
 networks:
   default:
