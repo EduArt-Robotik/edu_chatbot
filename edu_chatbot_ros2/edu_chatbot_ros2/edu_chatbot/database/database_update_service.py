@@ -82,7 +82,10 @@ class DatabaseUpdateService:
   def update_database(self) -> tuple[int, int]:
     """
     Load documents from the database path, chunk, embed, and store them.
-    Uses IngestionCache to skip embedding unchanged chunks.
+
+    Table content is moved from structured reader metadata into the
+    document content so it can participate in chunking and embedding.
+    Non-scalar metadata is removed before the nodes are written to Chroma.
     
     Returns:
         Tuple of (total_documents_processed, total_nodes_created)
@@ -95,13 +98,59 @@ class DatabaseUpdateService:
     documents = reader.load_data(show_progress=True)
     
     logger.info(f'Loaded {len(documents)} documents from {self._database_path}')
-    
-    # Run ingestion pipeline (automatically skips unchanged chunks via cache)
+
+    # Prepare documents for the vector store.
+    for document in documents:
+      # Preserve table content.
+      tables = document.metadata.get("tables")
+      if tables:
+        table_text = "\n\n".join(
+          table.get("detailed_content", "")
+          for table in tables
+          if isinstance(table, dict)
+          and table.get("detailed_content")
+        )
+
+        if table_text:
+          document.set_content(
+            document.get_content()
+            + "\n\n--- TABLE CONTENT ---\n\n"
+            + table_text
+            + "\n\n--- END TABLE CONTENT ---"
+          )
+
+      # Chroma only accepts scalar metadata values: str, int, float, or None.
+      # Keep useful scalar metadata and remove reader-specific structured metadata.
+      invalid_metadata_keys = [
+        key
+        for key, value in document.metadata.items()
+        if value is not None
+        and not isinstance(value, (str, int, float))
+      ]
+
+      for key in invalid_metadata_keys:
+        logger.debug(f"Removing non-scalar metadata before vector store: key={key} type={type(document.metadata[key]).__name__}")
+        del document.metadata[key]
+
+    # Run ingestion pipeline.
     nodes = self._pipeline.run(documents=documents, show_progress=True)
-    
     logger.info(f'Processed {len(nodes)} new/updated chunks')
-    
-    # Add nodes to vector store in batches to avoid ChromaDB batch size limit
+
+    # Optional safety check before writing to Chroma.
+    for node in nodes:
+      invalid_metadata = {
+        key: value
+        for key, value in node.metadata.items()
+        if value is not None
+        and not isinstance(value, (str, int, float))
+      }
+
+      if invalid_metadata:
+        logger.error(f'Node {node.node_id} still contains invalid Chroma metadata: {list(invalid_metadata.keys())}')
+        for key in invalid_metadata:
+            del node.metadata[key]
+
+    # Add nodes to vector store in batches to avoid ChromaDB batch size limit.
     if nodes:
       total_batches = (len(nodes) + CHROMA_BATCH_SIZE - 1) // CHROMA_BATCH_SIZE
       for i in range(0, len(nodes), CHROMA_BATCH_SIZE):
