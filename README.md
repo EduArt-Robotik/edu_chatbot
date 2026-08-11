@@ -170,6 +170,10 @@ ros2 topic pub /rag/input std_msgs/msg/String 'data: "How can a EduArt robot be 
 ros2 topic echo /rag/output --full-length
 ```
 
+Print all database chunks:
+```bash
+python3 -c "import chromadb, json; client = chromadb.HttpClient(host='chroma', port=8000); col = client.get_collection('embeddings'); print(json.dumps(col.get(include=['documents']), indent=2))"
+```
 
 ## LLM Models
 

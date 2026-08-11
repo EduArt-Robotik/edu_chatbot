@@ -21,7 +21,12 @@ RUN apt-get update \
 RUN pip install --break-system-packages --ignore-installed \
     ollama \
     chromadb \
-    llama-index-core \
+    pypdf2 \
+    pymupdf \
+    python-docx \
+    python-pptx \
+    llama-index \
+    llama-index-readers-file \
     llama-index-embeddings-ollama \
     llama-index-vector-stores-chroma
 
