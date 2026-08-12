@@ -3,6 +3,7 @@
 
 # Knowledge base
 database/*
+!database/put_database_data_here
 
 # Database
 chroma/db/*

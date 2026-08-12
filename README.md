@@ -1,13 +1,17 @@
-# EDU Chatbot
+# EDU Chatbot User Guide
 
 Local RAG pipeline with a ROS2 interface based on `ollama` and `chromadb`.
 
-## API Reference
+This guide is for engineers who want to run, update, and operate the pipeline using the provided shell scripts.
 
-- [Ollama API](https://docs.ollama.com/api/introduction)
-- [ChromaDB API](https://docs.trychroma.com/reference/python/client#heartbeat)
+## What This Pipeline Does
 
-## Component Interaction
+- Runs a local LLM service (`ollama`) for generation and embeddings.
+- Runs a local vector database (`chromadb`) for document retrieval.
+- Runs a ROS2 node that answers queries via RAG.
+- Supports CPU, NVIDIA, and AMD setups with automatic GPU detection.
+
+## How this pipeline works
 
 ```mermaid
 flowchart TB
@@ -74,119 +78,225 @@ LLM --> UPDATE
 UPDATE --> LLM
 ```
 
-## Services
 
-Core services:
+## Prerequisites
 
-- `edu-chatbot-llm`: local model runtime for generation and embeddings; persistent model cache in Docker volume `llm-models`.
-- `edu-chatbot-database`: local vector database for document chunks and embeddings; persistent data in Docker volume `database-core`.
+- Docker Engine + Docker Compose Plugin
+- ROS2 CLI available in your terminal when you want to test topics from the host
 
-Profile-based services:
+> Windows host systems only support Nvidia GPU hardware acceleration
 
-- `edu-chatbot-node` (profile `chatbot`): main ROS2 chatbot runtime.
-- `edu-chatbot-llm-update` (profile `update`): pulls the configured model set into the LLM runtime.
-- `edu-chatbot-database-update` (profile `update`): updates/rebuilds the knowledge DB.
-- `edu-chatbot-webui` (profile `tools`): optional browser UI for manual model/prompt checks.
+> The ROS2 test commands can also be executed inside a running Docker container. Refer to the [developer_documentation](docs/developer_documentation.md) for more infos.
 
-## Exposed Ports
-
-- `11434:11434` -> Ollama API ([http://localhost:11434](http://localhost:11434))
-- `8000:8000` -> Chroma API ([http://localhost:8000](http://localhost:8000))
-- `3000:8080` -> Open WebUI ([http://localhost:3000](http://localhost:3000))
-
-Health endpoints:
-
-- [http://localhost:11434/api/version](http://localhost:11434/api/version) (ollama)
-- [http://localhost:8000/api/v2/heartbeat](http://localhost:8000/api/v2/heartbeat) (chroma)
-
-## Commands
-
-Start the pipeling:
-
+> Install the Docker Compose plugin with this command on the Jetson Nano:
 ```bash
-# CPU
-docker compose up edu-chatbot-node
-
-# NVIDIA
-docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up edu-chatbot-node
-
-# AMD
-docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up edu-chatbot-node
+mkdir -p ~/.docker/cli-plugins
+curl -sSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" -o ~/.docker/cli-plugins/docker-compose
+chmod +x ~/.docker/cli-plugins/docker-compose
 ```
 
-## Monitoring and Testing
+## Folder Setup
 
+### Knowledge Base
 
-Check gpu access in container (Nvidia only):
+All documents that should be accessible by the AI agent are must be stored in the local folder `./database`.
+The database update ingests all compatible documents in the `./database` folder, slices the contents into smaller chunks and stores the chunks in a database for fast access.
+
+- The data source for the AI agent is `./database`.
+- Put all files you want to use for the LLM pipeline in this folder.
+- Supported content is loaded via LlamaIndex readers (`txt`, `md`, `pdf`, `docx`, `pptx`).
+
+### Model list
+
+Model installation is controlled by `ollama/models.txt`.
+
+- Every non-empty line that is **not** commented with `#` will be pulled during update.
+- Comment out a model line with `#` to skip installing it.
+- Keep `nomic-embed-text` enabled, because it is required for database embeddings.
+
+## Usage of the pipeline
+
+There are four convenience scripts to control the pipeline in the root of this repo.
+All scripts only call docker commands which can all be called manually as well for debugging or development.
+
+### 1) Build images
 
 ```bash
-docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+./edu_chatbot_build.sh
 ```
 
-Fetch available ollama models:
+What it does:
+
+- Builds all compose services (`docker compose --profile "*" build`).
+
+When to use it:
+
+- First setup
+- After Dockerfile or dependency changes
+- After updating the `edu_chatbot_ros2` code
+
+### 2) Update models and database
+
+```bash
+./edu_chatbot_update.sh
+```
+
+What it does:
+
+- Auto-detects NVIDIA/AMD/CPU and picks compose files accordingly for hardware acceleration.
+- Starts model update service: pulls all uncommented models from `ollama/models.txt`.
+- Starts database update service: embeds all documents from the configured document folder.
+- Stops update containers when finished.
+
+When to use it:
+
+- After changing `ollama/models.txt`
+- After adding/changing/removing documents from `database/`
+- Before first runtime start
+
+### 3) Start chatbot runtime
+
+```bash
+./edu_chatbot_start.sh
+```
+
+What it does:
+
+- Auto-detects GPU setup and starts `edu-chatbot-node` in detached mode.
+- Also starts required dependencies (`edu-chatbot-llm`, `edu-chatbot-database`).
+
+When to use it:
+
+- Normal operation
+
+### 4) Stop runtime and clean up
+
+```bash
+./edu_chatbot_stop.sh
+```
+
+What it does:
+
+- Stops running containers and removes orphans from this compose project.
+
+When to use it:
+
+- End of operation
+- Before a clean restart
+
+## First-Time Quickstart
+
+```bash
+cd /path/to/03_pipeline
+
+# 1) Adjust model list
+nano ollama/models.txt
+
+# 2) Add docs to be embedded
+ls database
+
+# 3) Build images
+./edu_chatbot_build.sh
+
+# 4) Pull models + embed docs
+./edu_chatbot_update.sh
+
+# 5) Start chatbot runtime
+./edu_chatbot_start.sh
+```
+
+## ROS interface of the RAG pipeline
+### edu_chatbot_node
+
+| Topic | Type | Description  |
+|---|---|---|
+| `/llm/input`  | std_msgs/msg/String  | Query input topic for the LLM (= Questions without `database/` context) |
+| `/llm/output` | std_msgs/msg/String  | Response to the LLM query |
+| `/rag/input`  | std_msgs/msg/String  | Query input topic for the RAG agent (= Questions with `database/` context) |
+| `/rag/output` | std_msgs/msg/String  | Response to the LLM query |
+
+| Parameter | Type | Description  |
+|---|---|---|
+| `model`  | String  | LLM model name. Must match one of the models in `models.txt` |
+| `temperature` | Float in [0.0, 1.0]  | Sets the temperature of the LLM model |
+| `embedding_model`  | String  | Embedding model name. Must match one of the models in `models.txt` |
+| `top_k` | Unsigned Int  | Number of data chunks that are fetched from the database for RAG queries |
+| `model_personality` | String  | Description of the LLM models response behavior |
+| `rag_instructions` | String  | Instructions for the LLM how to use the retrieved data chunks to anser the query. |
+
+### database_update_node
+
+| Topic | Type | Description  |
+|---|---|---|
+| ToDo: add embedding model as parameter | | |
+
+| Parameter | Type | Description  |
+|---|---|---|
+| `wipe_database`  | bool  | Set to `True` to perform a database wipe before updating it
+
+## Runtime Validation
+
+### Service health endpoints
+
+- Ollama: [http://localhost:11434/api/version](http://localhost:11434/api/version)
+- Chroma: [http://localhost:8000/api/v2/heartbeat](http://localhost:8000/api/v2/heartbeat)
+
+### Check pulled models
+
 ```bash
 curl http://localhost:11434/api/tags
 ```
 
-Ollama API sample request:
+### ROS2 test
 
 ```bash
-docker compose exec edu-chatbot-llm bash
-```
-
-```bash
-curl http://localhost:11434/api/generate -d '{
-  "model": "gemma3:270m",
-  "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
-  "stream": false,
-  "options": {
-    "temperature": 0.2
-  }
-}'
-```
-
-Define context token length and response token length.
-Will reload the model if size is different from before:
-
-```bash
-curl http://localhost:11434/api/generate -d '{
-  "model": "gemma3:270m",
-  "prompt": "Answer the following query briefly and concisely in 1 to 3 sentences: Why is the sky blue?",
-  "stream": false,
-  "options": {
-    "temperature": 0.2,
-    "num_predict": 512,
-    "num_ctx": 2048
-  }
-}'
-```
-
-ROS test commands:
-
-```bash
-ros2 topic pub /rag/input std_msgs/msg/String 'data: "How can a EduArt robot be programmed?"' -1
-```
-```bash
+# first terminal
 ros2 topic echo /rag/output --full-length
+
+#second terminal
+ros2 topic pub /rag/input std_msgs/msg/String 'data: "How can an EduArt robot be programmed?"' -1
 ```
 
-Print all database chunks:
+## Ports
+
+- `11434:11434` -> Ollama API
+- `8000:8000` -> Chroma API
+- `3000:8080` -> Open WebUI (optional tool profile)
+
+## Operational Notes
+
+- Model and database data are persisted in Docker volumes, so they survive container restarts.
+- `edu_chatbot_update.sh` only performs actual updates when the database or models.txt files have been changed. When one of the two is unchanged the corresponding component won't be updated.
+- If you change the embedding model or embedding strategy, run a full database refresh flow (project-specific procedure) before production use. The database can be reset by deleting the docker volume or by calling the `database_update_node` with the ros parameter `wipe_database:=true`.
+
+## Troubleshooting
+
+### Update takes too long or appears stuck
+
+- Large models can take significant time on first pull.
+- Large PDF/docx collections can make embedding slow on CPU.
+
+### No answer on `/rag/output`
+
+- Confirm runtime is started (`./edu_chatbot_start.sh`).
+- Confirm update was executed at least once (`./edu_chatbot_update.sh`).
+- Confirm the requested model exists in `ollama/models.txt` and is pulled.
+- Run the `edu_chatbot_node` with logging verbosity debug and check the console output of the node when sending a `/rag/input` message.
+
+### Wrong compute backend used
+
+- GPU selection is automatic via `detect_gpu.sh`.
+- If detection is wrong on your machine, run compose manually with explicit files:
+
 ```bash
-python3 -c "import chromadb, json; client = chromadb.HttpClient(host='edu-chatbot-database', port=8000); col = client.get_collection('embeddings'); print(json.dumps(col.get(include=['documents']), indent=2))"
+# NVIDIA
+docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml up -d edu-chatbot-node
+
+# AMD
+docker compose -f docker-compose.yaml -f docker-compose.amd.yaml up -d edu-chatbot-node
 ```
 
-## LLM Models
+## References
 
-Below are the tested LLM models.
-The response speed is measured with the above sample query.
-The rating is purely subjective.
-
-| Model          | Size   | Quantization | Time RPi5 | Time 4070  | Rating | Comment |
-|----------------|--------|--------------|-----------|------------|--------|---------|
-| gemma3:270m    | 292 MB | Q4_K_M       | 2.4s      | 1.9s       | 70%    | Feels usable on RPi5 |
-| gemma3:1b      | 815 MB | Q4_K_M       | 6.3s      | 2.7s       | 50%    | |
-| gemma4:e2b     | 7.2 GB | Q4_K_M       | Too large | 5.8s       | 1%     | |
-| qwen3.5:0.8b   | 1.0 GB | Q8_0         | 3m 8s     | 27s        | 0%     | |
-| qwen3.5:2b     | 2.7 GB | Q8_0         | Just no.  | 20s        | 0%     | |
-| llama3.2:1b    | 1.3 GB | Q8_0         | 9.7s      | 2.3s       | 20%    | |
-| ministral-3:3b | 3.0 GB |              |           |            |        | |
+- [Ollama API](https://docs.ollama.com/api/introduction)
+- [ChromaDB API](https://docs.trychroma.com/reference/python/client#heartbeat)
