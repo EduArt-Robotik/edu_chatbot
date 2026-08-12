@@ -9,7 +9,7 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('edu_chatbot')
 
 DEFAULT_DATABASE_PATH = '/home/user/database'
 DEFAULT_COLLECTION_NAME = 'embeddings'

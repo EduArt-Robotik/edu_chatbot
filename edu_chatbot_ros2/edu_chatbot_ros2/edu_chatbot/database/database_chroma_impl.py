@@ -6,7 +6,7 @@ import chromadb
 from .database_iface import DatabaseIface
 from .database_iface import DatabaseEntry
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('edu_chatbot')
 
 DEFAULT_COLLECTION_NAME = 'embeddings'
 DEFAULT_CHROMA_HOST = os.environ.get('CHROMA_HOST', 'localhost')

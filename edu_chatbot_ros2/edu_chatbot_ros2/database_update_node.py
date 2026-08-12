@@ -17,7 +17,7 @@ def main():
   node: Node = rclpy.create_node(NODE_NAME)
 
   # Bridge Python logging to ROS logging for the edu_chatbot module
-  setup_ros_logging(logger_name='edu_chatbot', node_name=NODE_NAME)
+  setup_ros_logging(node_name=NODE_NAME)
 
   node.declare_parameter(WIPE_PARAM_NAME, False)
   wipe_database = bool(node.get_parameter(WIPE_PARAM_NAME).value)

@@ -3,7 +3,7 @@ import logging
 from .llm_iface import LlmIface
 from ..database.database_iface import DatabaseIface, DatabaseEntry
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('edu_chatbot')
 
 DEFAULT_MODEL_PERSONALITY = 'Answer politely in 1 - 3 sentences.'
 DEFAULT_RAG_INSTRUCTIONS  = 'Use ONLY the provided context to answer the query. If the information is not present in the context, say "I don\'t know".'

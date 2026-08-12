@@ -10,7 +10,7 @@ DEFAULT_LLM_TEMPERATURE = 0.2
 DEFAULT_LLM_MODEL = 'gemma3:270m'
 DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('edu_chatbot')
 
 
 class OllamaLlm(LlmIface):

@@ -40,7 +40,7 @@ class EduChatbotNode(Node):
     self.rag_in_sub = self.create_subscription(String, RAG_INPUT_TOPIC, self.rag_callback, 10)
     self.rag_out_pub = self.create_publisher(String, RAG_OUTPUT_TOPIC, 10)
     
-    self.get_logger().info('EduChatbotNode has been started.')
+    get_logger().info('EduChatbotNode has been started.')
 
   def setup_rag_agent(self) -> bool:
     """Initialize the RAG agent with parameters. Returns True on success."""
@@ -52,7 +52,7 @@ class EduChatbotNode(Node):
     model_personality = self.get_parameter('model_personality').get_parameter_value().string_value
     rag_instructions = self.get_parameter('rag_instructions').get_parameter_value().string_value
     
-    self.get_logger().info(
+    get_logger().info(
       f'Loaded parameters:\n'
       f'  model: {model}\n'
       f'  temperature: {temperature}\n'
@@ -65,17 +65,17 @@ class EduChatbotNode(Node):
     # Init and test database
     chroma_db = ChromaDatabase()
     if chroma_db.ping():
-      self.get_logger().info('ChromaDB server connection test successful.')
+      get_logger().info('ChromaDB server connection test successful.')
     else:
-      self.get_logger().error('ChromaDB server connection test failed.')
+      get_logger().error('ChromaDB server connection test failed.')
       return False
 
     # Init and test LLM
     ollama_llm = OllamaLlm(model=model, temperature=temperature, embedding_model=embedding_model)
     if ollama_llm.ping():
-      self.get_logger().info('Ollama server connection test successful.')
+      get_logger().info('Ollama server connection test successful.')
     else:
-      self.get_logger().error('Ollama server connection test failed.')
+      get_logger().error('Ollama server connection test failed.')
       return False
 
     # Init RAG agent with dependencies
@@ -88,14 +88,14 @@ class EduChatbotNode(Node):
       rag_instructions=rag_instructions
     )
     
-    self.get_logger().info('All components are up and running.')
+    get_logger().info('All components are up and running.')
     return True
 
   def llm_callback(self, msg):
-    self.get_logger().debug(f'Received llm query: {msg.data}')
+    get_logger().debug(f'Received llm query: {msg.data}')
 
     if self.rag_agent is None:
-      self.get_logger().error('RAG agent not initialized')
+      get_logger().error('RAG agent not initialized')
       return
 
     try:
@@ -106,17 +106,17 @@ class EduChatbotNode(Node):
       response_msg.data = response
       self.llm_out_pub.publish(response_msg)
       end_time = datetime.now()
-      self.get_logger().debug(f'LLM prompt:\n{prompt}')
-      self.get_logger().debug(f'LLM response:\n{response_msg.data}')
-      self.get_logger().debug(f'LLM response time: {(end_time - start_time).total_seconds()} seconds.')
+      get_logger().debug(f'LLM prompt:\n{prompt}')
+      get_logger().debug(f'LLM response:\n{response_msg.data}')
+      get_logger().debug(f'LLM response time: {(end_time - start_time).total_seconds()} seconds.')
     except Exception as e:
-      self.get_logger().error(f'Failed to generate response: {e}')
+      get_logger().error(f'Failed to generate response: {e}')
 
   def rag_callback(self, msg):
-    self.get_logger().debug(f'Received rag query: {msg.data}')
+    get_logger().debug(f'Received rag query: {msg.data}')
 
     if self.rag_agent is None:
-      self.get_logger().error('RAG agent not initialized')
+      get_logger().error('RAG agent not initialized')
       return
 
     try:
@@ -126,17 +126,17 @@ class EduChatbotNode(Node):
       response_msg = String()
       response_msg.data = response
       self.rag_out_pub.publish(response_msg)
-      self.get_logger().debug(f'RAG prompt:\n{context}')
-      self.get_logger().debug(f'RAG response:\n{response_msg.data}')
-      self.get_logger().debug(f'RAG response time: {(datetime.now() - start_time).total_seconds()} seconds.')
+      get_logger().debug(f'RAG prompt:\n{context}')
+      get_logger().debug(f'RAG response:\n{response_msg.data}')
+      get_logger().debug(f'RAG response time: {(datetime.now() - start_time).total_seconds()} seconds.')
     except Exception as e:
-      self.get_logger().error(f'Failed to generate response: {e}')
+      get_logger().error(f'Failed to generate response: {e}')
 
 def main():
   rclpy.init()
   
   # Bridge Python logging to ROS logging for the edu_chatbot module
-  setup_ros_logging(logger_name='edu_chatbot', node_name=NODE_NAME)
+  setup_ros_logging(node_name=NODE_NAME)
 
   # Init node (parameters are declared in __init__)
   edu_chatbot_node = EduChatbotNode()
