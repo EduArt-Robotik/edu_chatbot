@@ -1,9 +1,10 @@
 services:
   edu-chatbot-llm:
-    deploy:
+    deploy: # Support for general Nvidia GPUS
       resources:
         reservations:
           devices:
             - driver: nvidia
               capabilities: [gpu]
               count: all
+    runtime: nvidia # Special requirement for Nvidia Jetson
