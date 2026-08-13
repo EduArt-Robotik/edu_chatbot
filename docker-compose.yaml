@@ -89,10 +89,12 @@ services:
     restart: unless-stopped
     profiles:
       - chatbot
+    network_mode: host # Enable host networking for ROS2 communication
     environment:
-      - CHROMA_HOST=edu-chatbot-database
+      - CHROMA_HOST=localhost
       - CHROMA_PORT=8000
-      - OLLAMA_HOST=http://edu-chatbot-llm:11434
+      - OLLAMA_HOST=http://localhost:11434
+      - ROS_DOMAIN_ID=0
     command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
