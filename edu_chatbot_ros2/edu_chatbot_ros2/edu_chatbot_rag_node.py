@@ -2,19 +2,20 @@ from datetime import datetime
 
 import rclpy
 from rclpy.node import Node
+from rclpy.action import ActionServer
 from std_msgs.msg import String
+
+from edu_chatbot_msgs.action import Query
 
 from .edu_chatbot.chatbot.llm_ollama_impl import OllamaLlm, DEFAULT_LLM_MODEL, DEFAULT_LLM_TEMPERATURE, DEFAULT_EMBEDDING_MODEL
 from .edu_chatbot.chatbot.rag_agent import RagAgent, DEFAULT_TOP_K, DEFAULT_MODEL_PERSONALITY, DEFAULT_RAG_INSTRUCTIONS
 from .edu_chatbot.database.database_chroma_impl import ChromaDatabase
 from .ros_logging_adapter import setup_ros_logging
 
-NODE_NAME    = 'edu_chatbot_rag_node'
-LLM_INPUT_TOPIC  = 'llm/input'
-LLM_OUTPUT_TOPIC = 'llm/output'
-RAG_INPUT_TOPIC  = 'rag/input'
-RAG_OUTPUT_TOPIC = 'rag/output'
-
+NODE_NAME         = 'edu_chatbot_rag_node'
+LLM_ACTION_TOPIC  = 'llm/query'
+RAG_ACTION_TOPIC  = 'rag/query'
+DEFAULT_WARM_UP   = True
 
 def get_logger():
   return rclpy.logging.get_logger(NODE_NAME)
@@ -31,15 +32,12 @@ class EduChatbotRagNode(Node):
     self.declare_parameter('top_k', DEFAULT_TOP_K)
     self.declare_parameter('model_personality', DEFAULT_MODEL_PERSONALITY)
     self.declare_parameter('rag_instructions', DEFAULT_RAG_INSTRUCTIONS)
-    
+    self.declare_parameter('warm_up_pipeline', DEFAULT_WARM_UP)
+
     # Initialize components (will be set up after parameter reading)
     self.rag_agent = None
-
-    self.llm_in_sub = self.create_subscription(String, LLM_INPUT_TOPIC, self.llm_callback, 10)
-    self.llm_out_pub = self.create_publisher(String, LLM_OUTPUT_TOPIC, 10)
-    self.rag_in_sub = self.create_subscription(String, RAG_INPUT_TOPIC, self.rag_callback, 10)
-    self.rag_out_pub = self.create_publisher(String, RAG_OUTPUT_TOPIC, 10)
-    
+    self.llm_action_server = ActionServer(self, Query, LLM_ACTION_TOPIC, self.llm_action_callback)
+    self.rag_action_server = ActionServer(self, Query, RAG_ACTION_TOPIC, self.rag_action_callback)
     get_logger().info(f'{NODE_NAME} has been started.')
 
   def setup_rag_agent(self) -> bool:
@@ -51,6 +49,7 @@ class EduChatbotRagNode(Node):
     top_k = self.get_parameter('top_k').get_parameter_value().integer_value
     model_personality = self.get_parameter('model_personality').get_parameter_value().string_value
     rag_instructions = self.get_parameter('rag_instructions').get_parameter_value().string_value
+    warm_up_pipeline = self.get_parameter('warm_up_pipeline').get_parameter_value().bool_value
     
     get_logger().info(
       f'Loaded parameters:\n'
@@ -59,7 +58,7 @@ class EduChatbotRagNode(Node):
       f'  embedding_model: {embedding_model}\n'
       f'  top_k: {top_k}\n'
       f'  model_personality: {model_personality}\n'
-      f'  rag_instructions: {rag_instructions}'
+      f'  warm_up_pipeline: {warm_up_pipeline}'
     )
     
     # Init and test database
@@ -89,48 +88,71 @@ class EduChatbotRagNode(Node):
     )
     
     get_logger().info('All components are up and running.')
+
+    if warm_up_pipeline:
+      get_logger().info('Warming up the RAG pipeline...')
+      try:
+        self.rag_agent.query_rag(query="Hello there!")
+        get_logger().info('RAG pipeline warm-up completed successfully.')
+      except Exception as e:
+        get_logger().error(f'Failed to warm up the RAG pipeline: {e}')
+        return False
+
     return True
 
-  def llm_callback(self, msg):
-    get_logger().debug(f'Received llm query: {msg.data}')
+  def llm_action_callback(self, goal_handle):
+    self.get_logger().debug(f'Received LLM action goal: {goal_handle.request.query}')
 
+    result = Query.Result()
+
+    # Abort if agent isn't ready
     if self.rag_agent is None:
-      get_logger().error('RAG agent not initialized')
-      return
+      self.get_logger().error('RAG agent not initialized')
+      goal_handle.abort()
+      result.response = "Agent not initialized"
+      return result
 
     try:
       start_time = datetime.now()
-      response, prompt = self.rag_agent.query_llm(query=msg.data)
+      result.response, context = self.rag_agent.query_llm(query=goal_handle.request.query)
+      self.get_logger().debug(f'LLM prompt:\n{context}')
+      self.get_logger().debug(f'LLM response:\n{result.response}')
+      self.get_logger().debug(f'LLM response time: {(datetime.now() - start_time).total_seconds()} seconds.')
+      goal_handle.succeed()
 
-      response_msg = String()
-      response_msg.data = response
-      self.llm_out_pub.publish(response_msg)
-      end_time = datetime.now()
-      get_logger().debug(f'LLM prompt:\n{prompt}')
-      get_logger().debug(f'LLM response:\n{response_msg.data}')
-      get_logger().debug(f'LLM response time: {(end_time - start_time).total_seconds()} seconds.')
     except Exception as e:
-      get_logger().error(f'Failed to generate response: {e}')
+      self.get_logger().error(f'Failed to generate response: {e}')
+      goal_handle.abort()
+      result.response = f"Error: {e}"
 
-  def rag_callback(self, msg):
-    get_logger().debug(f'Received rag query: {msg.data}')
+    return result
 
+  def rag_action_callback(self, goal_handle):
+    self.get_logger().debug(f'Received RAG action goal: {goal_handle.request.query}')
+
+    result = Query.Result()
+
+    # Abort if agent isn't ready
     if self.rag_agent is None:
-      get_logger().error('RAG agent not initialized')
-      return
+      self.get_logger().error('RAG agent not initialized')
+      goal_handle.abort()
+      result.response = "Agent not initialized"
+      return result
 
     try:
       start_time = datetime.now()
-      response, context = self.rag_agent.query_rag(query=msg.data)
+      result.response, context = self.rag_agent.query_rag(query=goal_handle.request.query)
+      self.get_logger().debug(f'RAG prompt:\n{context}')
+      self.get_logger().debug(f'RAG response:\n{result.response}')
+      self.get_logger().debug(f'RAG response time: {(datetime.now() - start_time).total_seconds()} seconds.')
+      goal_handle.succeed()
 
-      response_msg = String()
-      response_msg.data = response
-      self.rag_out_pub.publish(response_msg)
-      get_logger().debug(f'RAG prompt:\n{context}')
-      get_logger().debug(f'RAG response:\n{response_msg.data}')
-      get_logger().debug(f'RAG response time: {(datetime.now() - start_time).total_seconds()} seconds.')
     except Exception as e:
-      get_logger().error(f'Failed to generate response: {e}')
+      self.get_logger().error(f'Failed to generate response: {e}')
+      goal_handle.abort()
+      result.response = f"Error: {e}"
+
+    return result
 
 def main():
   rclpy.init()

@@ -83,8 +83,8 @@ services:
 
   edu-chatbot-rag:
     build:
-      context: ./edu_chatbot_ros2
-      dockerfile: ./Dockerfile
+      context: ./
+      dockerfile: ./edu_chatbot_ros2/Dockerfile
     image: edu_chatbot_ros2:latest
     restart: unless-stopped
     profiles:
@@ -95,13 +95,37 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://localhost:11434
       - ROS_DOMAIN_ID=0
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "--ros-args", "--log-level", "debug"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:
       edu-chatbot-llm:
         condition: service_healthy
       edu-chatbot-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 node list | grep -q edu_chatbot_rag_node'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  edu-chatbot-pipeline:
+    build:
+      context: ./
+      dockerfile: ./edu_chatbot_ros2/Dockerfile
+    image: edu_chatbot_ros2:latest
+    restart: unless-stopped
+    profiles:
+      - chatbot
+    network_mode: host # Enable host networking for ROS2 communication
+    environment:
+      - ROS_DOMAIN_ID=0
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_pipeline_manager_node", "--ros-args", "--log-level", "debug"]
+    stdin_open: true
+    tty: true
+    depends_on:
+      edu-chatbot-rag:
         condition: service_healthy
 
   edu-chatbot-webui:

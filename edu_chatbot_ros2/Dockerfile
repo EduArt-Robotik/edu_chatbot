@@ -48,7 +48,8 @@ ENV color_prompt=yes
 # Set up ROS workspace and build the package
 RUN mkdir -p /home/$USER/ros2_ws/src
 WORKDIR /home/$USER/ros2_ws
-COPY --chown=$USER . /home/$USER/ros2_ws/src/edu_chatbot_ros2
+COPY --chown=$USER ./edu_chatbot_ros2 /home/$USER/ros2_ws/src/edu_chatbot_ros2
+COPY --chown=$USER ./edu_chatbot_msgs /home/$USER/ros2_ws/src/edu_chatbot_msgs
 RUN bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
 
 # Source ROS files
@@ -56,6 +57,6 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
 RUN echo "source ~/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
 
 # Add entry point
-COPY --chown=$USER ./docker/entrypoint /home/$USER/
+COPY --chown=$USER ./edu_chatbot_ros2/docker/entrypoint /home/$USER/
 RUN chmod a+x /home/$USER/entrypoint
 ENTRYPOINT [ "/home/user/entrypoint" ]
