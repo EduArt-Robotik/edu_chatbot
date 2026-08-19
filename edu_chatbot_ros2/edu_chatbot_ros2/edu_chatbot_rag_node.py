@@ -9,7 +9,7 @@ from .edu_chatbot.chatbot.rag_agent import RagAgent, DEFAULT_TOP_K, DEFAULT_MODE
 from .edu_chatbot.database.database_chroma_impl import ChromaDatabase
 from .ros_logging_adapter import setup_ros_logging
 
-NODE_NAME    = 'edu_chatbot_node'
+NODE_NAME    = 'edu_chatbot_rag_node'
 LLM_INPUT_TOPIC  = 'llm/input'
 LLM_OUTPUT_TOPIC = 'llm/output'
 RAG_INPUT_TOPIC  = 'rag/input'
@@ -20,7 +20,7 @@ def get_logger():
   return rclpy.logging.get_logger(NODE_NAME)
 
 
-class EduChatbotNode(Node):
+class EduChatbotRagNode(Node):
   def __init__(self):
     super().__init__(NODE_NAME)
     
@@ -40,7 +40,7 @@ class EduChatbotNode(Node):
     self.rag_in_sub = self.create_subscription(String, RAG_INPUT_TOPIC, self.rag_callback, 10)
     self.rag_out_pub = self.create_publisher(String, RAG_OUTPUT_TOPIC, 10)
     
-    get_logger().info('EduChatbotNode has been started.')
+    get_logger().info(f'{NODE_NAME} has been started.')
 
   def setup_rag_agent(self) -> bool:
     """Initialize the RAG agent with parameters. Returns True on success."""
@@ -139,7 +139,7 @@ def main():
   setup_ros_logging(node_name=NODE_NAME)
 
   # Init node (parameters are declared in __init__)
-  edu_chatbot_node = EduChatbotNode()
+  edu_chatbot_node = EduChatbotRagNode()
   
   # Setup RAG agent with parameters
   if not edu_chatbot_node.setup_rag_agent():
