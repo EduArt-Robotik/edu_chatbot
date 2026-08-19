@@ -19,6 +19,8 @@ DEFAULT_CHROMA_HOST = os.environ.get('CHROMA_HOST', 'localhost')
 DEFAULT_CHROMA_PORT = int(os.environ.get('CHROMA_PORT', '8000'))
 DEFAULT_INGESTION_CACHE_DIR = os.environ.get('INGESTION_CACHE_PATH', '/home/user/data')
 
+SUPPORTED_EXTENSIONS = [".txt", ".docx", ".pptx", ".md", ".pdf"]
+
 # ChromaDB HTTP client has payload size limits. With embeddings (~3KB each)
 # plus metadata, batch size of 100 keeps payloads under typical limits.
 CHROMA_BATCH_SIZE = 100
@@ -119,10 +121,11 @@ class DatabaseUpdateService:
       else:
         logger.info(f'No ingestion cache found at {self._cache_path}; starting fresh')
 
-    # Load all documents from the directory
+    # Load documents with allowed extensions from the directory
     reader = SimpleDirectoryReader(
       input_dir=self._database_path,
       recursive=True,
+      required_exts=SUPPORTED_EXTENSIONS,
     )
     documents = reader.load_data(show_progress=True)
     
