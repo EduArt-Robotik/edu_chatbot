@@ -96,6 +96,7 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://localhost:11434
       - ROS_DOMAIN_ID=0
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
     command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
@@ -122,6 +123,7 @@ services:
     network_mode: host # Enable host networking for ROS2 communication
     environment:
       - ROS_DOMAIN_ID=0
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
     command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_pipeline_manager_node", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
