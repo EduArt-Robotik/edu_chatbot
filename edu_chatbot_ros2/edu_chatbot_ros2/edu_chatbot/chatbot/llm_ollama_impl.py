@@ -7,7 +7,7 @@ from datetime import datetime
 from .llm_iface import LlmIface
 
 DEFAULT_KEEP_ALIVE = -1
-DEFAULT_LLM_TEMPERATURE = 0.2
+DEFAULT_LLM_TEMPERATURE = 0.0
 DEFAULT_LLM_MODEL = 'gemma3:270m'
 DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
 

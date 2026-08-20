@@ -1,6 +1,7 @@
 import time
 from enum import Enum, auto
 from threading import Thread
+from rapidfuzz import process, fuzz
 
 import rclpy
 from rclpy.node import Node
@@ -9,24 +10,26 @@ from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import SetBool
 
 # Message and Action Imports
+from whisper_msgs.action import STT
 from edu_chatbot_msgs.action import Query
-# from whisper_msgs.action import STT
 # from audio_common_msgs.action import TTS
 
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
-DEFAULT_WAKEUP_KEYWORD   = 'Hey Eddie'
+DEFAULT_WAKEUP_KEYWORDS   = ['Hello Pib', 'Hello Robot', 'Hey Pib', 'Hey Robot']
 DEFAULT_LOG_TO_FILE      = False
 DEFAULT_START_ENABLED    = True
-DEFAULT_STT_ACTION_TOPIC = '/audio/in'
+DEFAULT_STT_ACTION_TOPIC = '/whisper/listen'
 DEFAULT_RAG_ACTION_TOPIC = '/rag/query'
 DEFAULT_TTS_ACTION_TOPIC = '/audio/out'
 
 # Timeout limits in seconds, None means no timeout (wait indefinitely)
 TIMEOUT_STT_SEC = None
-TIMEOUT_RAG_SEC = 10.0
-TIMEOUT_TTS_SEC = 15.0
+TIMEOUT_RAG_SEC = 30.0
+TIMEOUT_TTS_SEC = 30.0
 
+def get_logger():
+  return rclpy.logging.get_logger(NODE_NAME)
 
 class ChatbotState(Enum):
   OFF       = auto()
@@ -41,8 +44,8 @@ class EduChatbotPipelineManagerNode(Node):
     super().__init__(NODE_NAME)
 
     # Parameters Configuration
-    self.declare_parameter('wakeup_keyword', DEFAULT_WAKEUP_KEYWORD)
-    self.wakeup_keyword = self.get_parameter('wakeup_keyword').get_parameter_value().string_value
+    self.declare_parameter('wakeup_keywords', DEFAULT_WAKEUP_KEYWORDS)
+    self.wakeup_keywords = self.get_parameter('wakeup_keywords').get_parameter_value().string_array_value
 
     self.declare_parameter('log_to_file', DEFAULT_LOG_TO_FILE)
     self.log_to_file = self.get_parameter('log_to_file').get_parameter_value().bool_value
@@ -54,6 +57,16 @@ class EduChatbotPipelineManagerNode(Node):
     self.declare_parameter('rag_action_topic', DEFAULT_RAG_ACTION_TOPIC)
     self.declare_parameter('tts_action_topic', DEFAULT_TTS_ACTION_TOPIC)
 
+    get_logger().info(
+      f'Loaded parameters:\n'
+      f'  wakeup_keywords: {self.wakeup_keywords}\n'
+      f'  log_to_file: {self.log_to_file}\n'
+      f'  start_enabled: {self.pipeline_enabled}\n'
+      f'  stt_action_topic: {self.get_parameter("stt_action_topic").get_parameter_value().string_value}\n'
+      f'  rag_action_topic: {self.get_parameter("rag_action_topic").get_parameter_value().string_value}\n'
+      f'  tts_action_topic: {self.get_parameter("tts_action_topic").get_parameter_value().string_value}'
+    )
+
     # Internal pipeline buffers passed between states
     self._current_user_text = ""
     self._current_rag_response = ""
@@ -62,24 +75,24 @@ class EduChatbotPipelineManagerNode(Node):
     self.state = ChatbotState.LISTENING if self.pipeline_enabled else ChatbotState.OFF
 
     # Action Clients
-    # self.stt_action_client = ActionClient(self, STT, stt_action_topic)
+    self.stt_action_client = ActionClient(self, STT, DEFAULT_STT_ACTION_TOPIC)
     self.rag_action_client = ActionClient(self, Query, DEFAULT_RAG_ACTION_TOPIC)
-    # self.tts_action_client = ActionClient(self, TTS, tts_action_topic)
+    # self.tts_action_client = ActionClient(self, TTS, DEFAULT_TTS_ACTION_TOPIC)
 
     # Services and Execution Thread
     self.enable_srv = self.create_service(SetBool, "enable_pipeline", self.enable_callback)
     Thread(target=self.run_pipeline_loop, daemon=True).start()
 
-    self.get_logger().info(f'{NODE_NAME} initialized successfully.')
+    get_logger().info(f'{NODE_NAME} initialized successfully.')
 
   def enable_callback(self, request, response):
     if request.data:
-      self.get_logger().info("Pipeline service call: Enabling system.")
+      get_logger().info("Pipeline service call: Enabling system.")
       self.pipeline_enabled = True
       if self.state == ChatbotState.OFF:
         self.state = ChatbotState.LISTENING
     else:
-      self.get_logger().info("Pipeline service call: Disabling system.")
+      get_logger().info("Pipeline service call: Disabling system.")
       self.pipeline_enabled = False
       self.state = ChatbotState.OFF
     
@@ -120,37 +133,76 @@ class EduChatbotPipelineManagerNode(Node):
   # ---------------------------------------------------------------------------
   # State Handlers
   # ---------------------------------------------------------------------------
+  def process_transcription(self, text: str, score_cutoff: int = 75):
+    """
+    Finds the best matching wakeword in `text` and returns the sub-string AFTER it.
+    """
+    text_clean = text.lower().strip()
+    
+    # 1. Use fuzz.partial_ratio to get a numeric score for extractOne
+    match = process.extractOne(
+      text_clean, 
+      self.wakeup_keywords,
+      scorer=fuzz.partial_ratio,
+      score_cutoff=score_cutoff
+    )
+    
+    if match:
+      matched_phrase, score, index = match
+      
+      # 2. Get the exact alignment indices for the winning match
+      alignment = fuzz.partial_ratio_alignment(text_clean, matched_phrase)
+      
+      if alignment:
+        matched_end_idx = alignment.src_end
+        remaining_text = text_clean[matched_end_idx:].lstrip(" ,.!?")
+        return True, remaining_text
+        
+    return False, text_clean
+
+  # ---------------------------------------------------------------------------
+  # State Handlers
+  # ---------------------------------------------------------------------------
   def _state_listening(self):
     """Blocks indefinitely until speech keyword is spoken, then shifts to THINKING."""
-    self.get_logger().info("[State: LISTENING] Waiting for keyword activation...")
+    get_logger().info("[State: LISTENING] Waiting for keyword activation...")
 
     # Listen state has infinite timeout (timeout_sec=None)
     # TODO: Maybe execute some idle poses while waiting for user input
-    # stt_goal = STT.Goal()
-    # stt_res = self._send_action_goal_sync(self.stt_action_client, stt_goal, timeout_sec=TIMEOUT_STT_SEC)
-    # self._current_user_text = stt_res.text
+    stt_goal = STT.Goal()
+    stt_res = self._send_action_goal_sync(self.stt_action_client, stt_goal, timeout_sec=TIMEOUT_STT_SEC)
+    get_logger().info(f"STT Result: '{stt_res.transcription.text}'")
+
+    found, action_text = self.process_transcription(stt_res.transcription.text)
+    if found:
+      if len(action_text) > 10:
+        get_logger().info(f"Wakeword detected. User said: '{action_text}'")
+        self._current_user_text = action_text
+        self.state = ChatbotState.THINKING
+      else:
+        get_logger().info(f"Wakeword detected, but no user query found. Restart listening...")
+    else:
+      get_logger().info(f"Wakeword not detected. Restart listening...")
 
     # Placeholder for testing
-    time.sleep(5.0)
-    self._current_user_text = "What can you tell me?"
-    self.get_logger().info(f"User Input: '{self._current_user_text}'")
+    #time.sleep(5.0)
+    #self._current_user_text = "What can you tell me?"
 
-    self.state = ChatbotState.THINKING
 
   def _state_thinking(self):
-    self.get_logger().info("[State: THINKING] Querying RAG backend...")
+    get_logger().info("[State: THINKING] Querying RAG backend...")
 
     rag_msg = Query.Goal()
     rag_msg.query = self._current_user_text
     rag_res = self._send_action_goal_sync(self.rag_action_client,rag_msg,timeout_sec=TIMEOUT_RAG_SEC)
 
     self._current_rag_response = rag_res.response
-    self.get_logger().info(f"RAG Response: '{self._current_rag_response}'")
+    get_logger().info(f"RAG Response: '{self._current_rag_response}'")
 
     self.state = ChatbotState.SPEAKING
 
   def _state_speaking(self):
-    self.get_logger().info("[State: SPEAKING] Outputting response...")
+    get_logger().info("[State: SPEAKING] Outputting response...")
 
     # tts_goal = TTS.Goal(text=self._current_rag_response)
     # self._send_action_goal_sync(self.tts_action_client, tts_goal, timeout_sec=TIMEOUT_TTS_SEC)
@@ -158,7 +210,7 @@ class EduChatbotPipelineManagerNode(Node):
     self.state = ChatbotState.LISTENING
 
   def _state_error(self, error_message: str):
-    self.get_logger().error(f"[State: ERROR] Pipeline failure: {error_message}")
+    get_logger().error(f"[State: ERROR] Pipeline failure: {error_message}")
     # TODO: Maybe inform user that an error occurred (or maybe not, if there are too many errors)
     self.state = ChatbotState.LISTENING if self.pipeline_enabled else ChatbotState.OFF
 
@@ -166,11 +218,13 @@ class EduChatbotPipelineManagerNode(Node):
   # State Machine Execution Loop
   # ---------------------------------------------------------------------------
   def run_pipeline_loop(self):
-    self.get_logger().info("Waiting for external Action Servers to become ready...")
-    # self.stt_action_client.wait_for_server()
+    get_logger().info("Waiting for external Action Servers to become ready...")
+    self.stt_action_client.wait_for_server()
     self.rag_action_client.wait_for_server()
     # self.tts_action_client.wait_for_server()
-    self.get_logger().info("Connected to Action Servers. Pipeline active.")
+    get_logger().info("Connected to Action Servers. Pipeline active.")
+
+    #TODO: Cancel outstanding actions if pipeline was previously disabled mid-execution
 
     while rclpy.ok():
       if not self.pipeline_enabled:

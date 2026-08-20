@@ -1,4 +1,4 @@
-FROM ros:jazzy-ros-base
+FROM ros:jazzy-ros-base AS base
 
 ENV USER=user
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,6 +23,7 @@ RUN pip install --break-system-packages --ignore-installed \
     chromadb \
     pypdf2 \
     pymupdf \
+    rapidfuzz \
     python-docx \
     python-pptx \
     llama-index \
@@ -45,12 +46,25 @@ RUN echo "export TERM=xterm-256color" >> /home/$USER/.bashrc \
 ENV TERM=xterm-256color
 ENV color_prompt=yes
 
+FROM base AS build
+
 # Set up ROS workspace and build the package
 RUN mkdir -p /home/$USER/ros2_ws/src
+RUN mkdir -p /home/$USER/tmp
+
+# ToDo: Create separate image for the orchestration node that needs external dependencies
+WORKDIR /home/$USER/tmp
+RUN git clone https://github.com/mgonzs13/whisper_ros.git /home/$USER/tmp/whisper_ros
+RUN cp -R /home/$USER/tmp/whisper_ros/whisper_msgs /home/$USER/ros2_ws/src/whisper_msgs
+RUN rm -rf /home/$USER/tmp/
+
 WORKDIR /home/$USER/ros2_ws
 COPY --chown=$USER ./edu_chatbot_ros2 /home/$USER/ros2_ws/src/edu_chatbot_ros2
 COPY --chown=$USER ./edu_chatbot_msgs /home/$USER/ros2_ws/src/edu_chatbot_msgs
+
 RUN bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
+
+FROM build AS final
 
 # Source ROS files
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc

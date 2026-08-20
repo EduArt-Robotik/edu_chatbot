@@ -27,7 +27,7 @@ services:
     build:
       context: ./ollama
       dockerfile: ./Dockerfile
-    restart: "no"
+    restart: unless-stopped
     profiles:
       - update
     environment:
@@ -91,13 +91,14 @@ services:
     profiles:
       - chatbot
     network_mode: host # Enable host networking for ROS2 communication
+    ipc: host
     environment:
       - CHROMA_HOST=localhost
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://localhost:11434
       - ROS_DOMAIN_ID=0
       - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "--ros-args", "--log-level", "info"]
+    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "-p", "temperature:=0.0", "--ros-args", "--log-level", "info"]
     stdin_open: true
     tty: true
     depends_on:
@@ -121,6 +122,7 @@ services:
     profiles:
       - chatbot
     network_mode: host # Enable host networking for ROS2 communication
+    ipc: host
     environment:
       - ROS_DOMAIN_ID=0
       - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
