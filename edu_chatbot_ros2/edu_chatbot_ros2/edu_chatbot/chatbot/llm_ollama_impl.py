@@ -6,6 +6,7 @@ from datetime import datetime
 
 from .llm_iface import LlmIface
 
+DEFAULT_KEEP_ALIVE = -1
 DEFAULT_LLM_TEMPERATURE = 0.2
 DEFAULT_LLM_MODEL = 'gemma3:270m'
 DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
@@ -16,9 +17,10 @@ logger = logging.getLogger('edu_chatbot')
 class OllamaLlm(LlmIface):
   """Ollama implementation of the LLM interface."""
 
-  def __init__(self, model: str = DEFAULT_LLM_MODEL, temperature: float = DEFAULT_LLM_TEMPERATURE, embedding_model: str = DEFAULT_EMBEDDING_MODEL):
+  def __init__(self, model: str = DEFAULT_LLM_MODEL, temperature: float = DEFAULT_LLM_TEMPERATURE, embedding_model: str = DEFAULT_EMBEDDING_MODEL, keep_alive: int = DEFAULT_KEEP_ALIVE):
     super().__init__(model, temperature)
     self._embedding_model = embedding_model
+    self._keep_alive = keep_alive
 
   def ping(self) -> bool:
     """Test the connection to the Ollama server."""
@@ -34,7 +36,7 @@ class OllamaLlm(LlmIface):
     """Generate a response using Ollama."""
     query_ts = datetime.now()
     try:
-        response: GenerateResponse = generate(model=self.model, prompt=prompt, options={'temperature': self.temperature})
+        response: GenerateResponse = generate(model=self.model, prompt=prompt, options={'temperature': self.temperature}, keep_alive=self._keep_alive)
     except Exception as e:
         logger.error(f'Failed to generate response: {e}')
         raise
@@ -45,7 +47,7 @@ class OllamaLlm(LlmIface):
   def embed(self, context: str) -> list[float]:
     """Generate an embedding using Ollama."""
     try:
-        response: EmbedResponse = embed(model=self._embedding_model, input=context)
+        response: EmbedResponse = embed(model=self._embedding_model, input=context, keep_alive=self._keep_alive)
     except Exception as e:
         logger.error(f'Failed to generate embedding: {e}')
         raise

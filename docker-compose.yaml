@@ -14,6 +14,7 @@ services:
       OLLAMA_NO_CLOUD: "1"
       OLLAMA_KEEP_ALIVE: "-1" # Keeps the models loaded in memory. Prevents unloading after a timeout.
       OLLAMA_IGPU_ENABLE: "1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
       interval: 5s
