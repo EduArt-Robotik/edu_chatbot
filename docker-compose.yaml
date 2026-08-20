@@ -105,11 +105,11 @@ services:
       edu-chatbot-database:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 node list | grep -q edu_chatbot_rag_node'"]
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action list | grep -q /rag/query'"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 300s
 
   edu-chatbot-pipeline:
     build:
