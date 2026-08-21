@@ -44,8 +44,11 @@ RUN mkdir -p /home/$USER/tmp
 
 # ToDo: Create separate image for the orchestration node that needs external dependencies
 WORKDIR /home/$USER/tmp
-RUN git clone https://github.com/mgonzs13/whisper_ros.git /home/$USER/tmp/whisper_ros
+RUN git clone https://github.com/mgonzs13/whisper_ros.git -b main --depth 1
 RUN cp -R /home/$USER/tmp/whisper_ros/whisper_msgs /home/$USER/ros2_ws/src/whisper_msgs
+
+RUN git clone https://github.com/pib-rocks/pib-backend.git -b main --depth 1
+RUN cp -R /home/$USER/tmp/pib-backend/ros_packages/datatypes /home/$USER/ros2_ws/src/datatypes
 RUN rm -rf /home/$USER/tmp/
 
 WORKDIR /home/$USER/ros2_ws
