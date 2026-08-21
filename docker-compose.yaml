@@ -62,8 +62,8 @@ services:
   edu-chatbot-database-update:
     build:
       context: ./
-      dockerfile: ./edu_chatbot_ros2/docker/Dockerfile
-    image: edu_chatbot_ros2:latest
+      dockerfile: ./edu_chatbot_rag/docker/Dockerfile
+    image: edu_chatbot_rag:latest
     restart: "no"
     profiles:
       - update
@@ -75,7 +75,7 @@ services:
     volumes:
       - ./database:/home/user/database
       - database-cache:/home/user/data
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_database_update_node", "--ros-args", "-p", "wipe_database:=false", "--ros-args", "--log-level", "info"]
+    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_database_update_node", "--ros-args", "-p", "wipe_database:=false", "--ros-args", "--log-level", "info"]
     depends_on:
       edu-chatbot-llm:
         condition: service_healthy
@@ -85,8 +85,8 @@ services:
   edu-chatbot-rag:
     build:
       context: ./
-      dockerfile: ./edu_chatbot_ros2/docker/Dockerfile
-    image: edu_chatbot_ros2:latest
+      dockerfile: ./edu_chatbot_rag/docker/Dockerfile
+    image: edu_chatbot_rag:latest
     restart: unless-stopped
     profiles:
       - chatbot
@@ -97,8 +97,8 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://localhost:11434
       - ROS_DOMAIN_ID=0
-      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "-p", "temperature:=0.0", "--ros-args", "--log-level", "info"]
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_rag/docker/fastdds_no_shm.xml
+    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "-p", "temperature:=0.0", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:
@@ -113,11 +113,11 @@ services:
       retries: 5
       start_period: 300s
 
-  edu-chatbot-pipeline:
+  edu-chatbot-controller:
     build:
       context: ./
-      dockerfile: ./edu_chatbot_ros2/docker/Dockerfile
-    image: edu_chatbot_ros2:latest
+      dockerfile: ./edu_chatbot_controller/docker/Dockerfile
+    image: edu_chatbot_controller:latest
     restart: unless-stopped
     profiles:
       - chatbot
@@ -125,8 +125,8 @@ services:
     ipc: host
     environment:
       - ROS_DOMAIN_ID=0
-      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_ros2/docker/fastdds_no_shm.xml
-    command: ["ros2", "run", "edu_chatbot_ros2", "edu_chatbot_pipeline_manager_node", "--ros-args", "--log-level", "info"]
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_controller/docker/fastdds_no_shm.xml
+    command: ["ros2", "run", "edu_chatbot_controller", "edu_chatbot_pib_controller_node", "--ros-args", "--log-level", "info"]
     stdin_open: true
     tty: true
     depends_on:

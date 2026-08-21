@@ -5,8 +5,9 @@ from ..database.database_iface import DatabaseIface, DatabaseEntry
 
 logger = logging.getLogger('edu_chatbot')
 
-DEFAULT_MODEL_PERSONALITY = 'Answer politely in 1 - 3 sentences.'
-DEFAULT_RAG_INSTRUCTIONS  = 'Use ONLY the provided context to answer the query. If the information is not present in the context, say "I don\'t know".'
+DEFAULT_MODEL_PERSONALITY = 'Answer directly and politely in 1 - 3 sentences without any meta-level comments.'
+#DEFAULT_RAG_INSTRUCTIONS  = 'Use ONLY the provided context to answer the query. If the information is not present in the context, say "I don\'t know".'
+DEFAULT_RAG_INSTRUCTIONS  = 'If possible use the above context to answer the query.'
 DEFAULT_TOP_K = 3
 
 class RagAgent:
@@ -57,7 +58,9 @@ class RagAgent:
   def generate_prompt(self, query: str, context: str = None) -> str:
     """Generate a RAG prompt for the LLM based on the query and optional context."""
     if context:
-      return f'{self._model_personality} {self._rag_instructions}\nContext: {context}\nQuery: {query}'
+      # The small local LLM has a limited attention window, so the context is placed first and the query last
+      # to ensure the instructions and query are within the attention window.
+      return f'{context}\n\n{self._model_personality} {self._rag_instructions}\nQuery: {query}'
     else:
       return f'{self._model_personality}\nQuery: {query}'
 

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'edu_chatbot_ros2'
+package_name = 'edu_chatbot_controller'
 
 setup(
     name=package_name,
@@ -13,9 +13,9 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ubuntu',
-    maintainer_email='ubuntu@todo.todo',
-    description='TODO: Package description',
+    maintainer='Hannes Duske',
+    maintainer_email='hannes.duske@eduart-robotik.com',
+    description='Robot controller node for embodied chatbots.',
     license='BSD-3-Clause',
     extras_require={
         'test': [
@@ -24,9 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'edu_chatbot_rag_node = edu_chatbot_ros2.edu_chatbot_rag_node:main',
-            'edu_chatbot_database_update_node = edu_chatbot_ros2.edu_chatbot_database_update_node:main',
-            'edu_chatbot_pipeline_manager_node = edu_chatbot_ros2.edu_chatbot_pipeline_manager_node:main',
+            'edu_chatbot_pib_controller_node = edu_chatbot_controller.edu_chatbot_pib_controller_node:main'
         ],
     },
 )
