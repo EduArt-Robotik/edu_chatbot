@@ -5,7 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker"
 source "$SCRIPT_DIR/detect_gpu.sh"
 COMPOSE_FILE=$(get_compose_file)
 
-# Stop and clean up containers and orphan networks
-docker compose $COMPOSE_FILE down edu-chatbot-controller --remove-orphans
-docker compose $COMPOSE_FILE down edu-chatbot-rag --remove-orphans
-docker compose $COMPOSE_FILE down --remove-orphans
+if [[ "$1" == "--all" || "$1" == "all" ]]; then
+    # Stop and clean up all containers from all profiles
+    docker compose $COMPOSE_FILE --profile "*" down --remove-orphans
+else
+    # Stop and clean up the default service
+    docker compose $COMPOSE_FILE down edu-chatbot-controller --remove-orphans
+fi

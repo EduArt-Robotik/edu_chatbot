@@ -8,3 +8,17 @@ services:
               capabilities: [gpu]
               count: all
     runtime: nvidia # Special requirement for Nvidia Jetson
+
+  edu-chatbot-stt:
+    build:
+      args:
+        USE_CUDA: "1"
+        CUDA_VERSION: "13-2"
+    deploy: # Support for general Nvidia GPUS
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: all
+    runtime: nvidia # Special requirement for Nvidia Jetson

@@ -1,0 +1,9 @@
+repositories:
+  audio_common:
+    type: git
+    url: https://github.com/mgonzs13/audio_common
+    version: 4.0.10
+  whisper_ros:
+    type: git
+    url: https://github.com/mgonzs13/whisper_ros
+    version: 4.0.7

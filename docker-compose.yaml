@@ -90,14 +90,15 @@ services:
     restart: unless-stopped
     profiles:
       - chatbot
-    network_mode: host # Enable host networking for ROS2 communication
-    ipc: host
+    network_mode: host
     environment:
       - CHROMA_HOST=localhost
       - CHROMA_PORT=8000
       - OLLAMA_HOST=http://localhost:11434
-      - ROS_DOMAIN_ID=0
-      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_rag/docker/fastdds_no_shm.xml
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
+    volumes:
+      - ./docker/fastdds_no_shm.xml:/opt/ros/jazzy/fastdds_no_shm.xml:ro
     command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_rag_node", "--ros-args", "-p", "model:=llama3.2:3b", "-p", "top_k:=5", "-p", "warm_up_pipeline:=true", "-p", "temperature:=0.0", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
@@ -113,6 +114,70 @@ services:
       retries: 5
       start_period: 300s
 
+  edu-chatbot-stt:
+    build:
+      context: .
+      dockerfile: ./edu_whisper_bringup/Dockerfile
+    image: whisper_ros:latest
+    restart: unless-stopped
+    profiles:
+      - chatbot
+    network_mode: host
+    privileged: true
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - whisper_ros:/root/.cache/huggingface/
+      - ./docker/fastdds_no_shm.xml:/opt/ros/jazzy/fastdds_no_shm.xml:ro
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
+    command: [ 
+      "/bin/bash",
+      "-c",
+      "source /opt/ros/jazzy/setup.bash && \
+       source /root/ros2_ws/install/setup.bash && \
+       ros2 launch edu_whisper_bringup whisper.launch.py"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action info /whisper/listen 2>/dev/null | grep -q \"Action servers: [1-9]\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+
+  edu-chatbot-tts:
+    build:
+      context: .
+      dockerfile: ./edu_piper_bringup/Dockerfile
+    image: piper_ros:latest
+    restart: unless-stopped
+    profiles:
+      - chatbot
+    network_mode: host
+    privileged: true
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - piper_ros:/root/.cache/huggingface/
+      - ./docker/fastdds_no_shm.xml:/opt/ros/jazzy/fastdds_no_shm.xml:ro
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
+    command: [ 
+      "/bin/bash",
+      "-c",
+      "source /opt/ros/jazzy/setup.bash && \
+      source /root/ros2_ws/install/setup.bash && \
+      ros2 launch edu_piper_bringup piper.launch.py"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action info /piper/say 2>/dev/null | grep -q \"Action servers: [1-9]\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+
   edu-chatbot-controller:
     build:
       context: ./
@@ -121,16 +186,19 @@ services:
     restart: unless-stopped
     profiles:
       - chatbot
-    network_mode: host # Enable host networking for ROS2 communication
-    ipc: host
+    network_mode: host
     environment:
-      - ROS_DOMAIN_ID=0
-      - FASTRTPS_DEFAULT_PROFILES_FILE=/home/user/ros2_ws/src/edu_chatbot_controller/docker/fastdds_no_shm.xml
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
+    volumes:
+      - ./docker/fastdds_no_shm.xml:/opt/ros/jazzy/fastdds_no_shm.xml:ro
     command: ["ros2", "run", "edu_chatbot_controller", "edu_chatbot_pib_controller_node", "--ros-args", "--log-level", "info"]
-    stdin_open: true
-    tty: true
     depends_on:
       edu-chatbot-rag:
+        condition: service_healthy
+      edu-chatbot-stt:
+        condition: service_healthy
+      edu-chatbot-tts:
         condition: service_healthy
 
   edu-chatbot-webui:
@@ -154,6 +222,8 @@ volumes:
   llm-models:
   database-core:
   database-cache:
+  whisper_ros:
+  piper_ros:
   
 networks:
   default:
