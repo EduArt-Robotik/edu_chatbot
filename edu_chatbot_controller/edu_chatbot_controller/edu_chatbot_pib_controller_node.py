@@ -12,8 +12,7 @@ from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import SetBool
 from whisper_msgs.action import STT
 from edu_chatbot_msgs.action import Query
-# from audio_common_msgs.action import TTS
-from datatypes.srv import PlayAudioFromSpeech
+from audio_common_msgs.action import TTS
 
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
@@ -22,7 +21,7 @@ DEFAULT_LOG_TO_FILE     = False
 DEFAULT_START_ENABLED   = True
 DEFAULT_STT_TOPIC       = '/whisper/listen'
 DEFAULT_RAG_TOPIC       = '/rag/query'
-DEFAULT_TTS_TOPIC       = '/play_audio_from_speech'
+DEFAULT_TTS_TOPIC       = '/piper/say'
 
 # Timeout limits in seconds, None means no timeout (wait indefinitely)
 TIMEOUT_STT_SEC = None
@@ -78,8 +77,7 @@ class EduChatbotPipelineManagerNode(Node):
     # Action Clients
     self.stt_action_client = ActionClient(self, STT, DEFAULT_STT_TOPIC)
     self.rag_action_client = ActionClient(self, Query, DEFAULT_RAG_TOPIC)
-    # self.tts_action_client = ActionClient(self, TTS, DEFAULT_TTS_TOPIC)
-    self.tts_service_client = self.create_client(PlayAudioFromSpeech, DEFAULT_TTS_TOPIC)
+    self.tts_action_client = ActionClient(self, TTS, DEFAULT_TTS_TOPIC)
 
     # Services and Execution Thread
     self.enable_srv = self.create_service(SetBool, "enable_pipeline", self.enable_callback)
@@ -206,26 +204,9 @@ class EduChatbotPipelineManagerNode(Node):
   def _state_speaking(self):
     get_logger().info("[State: SPEAKING] Outputting response...")
 
-    # tts_goal = TTS.Goal(text=self._current_rag_response)
-    # self._send_action_goal_sync(self.tts_action_client, tts_goal, timeout_sec=TIMEOUT_TTS_SEC)
-
-    tts_msg = PlayAudioFromSpeech.Request()
-    tts_msg.speech = self._current_rag_response
-    tts_msg.gender = "Male"
-    tts_msg.language = "English"
-    tts_msg.join = True
-    tts_future = self.tts_service_client.call_async(tts_msg)
-    tts_result = self._wait_for_future(tts_future, timeout_sec=TIMEOUT_TTS_SEC)
-
-    if tts_result is None:
-        self.state = ChatbotState.ERROR
-        raise TimeoutError("Timed out waiting for TTS service to complete.")
-
-    exc = tts_future.exception()
-    if exc is not None:
-        self.state = ChatbotState.ERROR
-        raise RuntimeError(f"TTS service failed with exception: {exc}")
-
+    tts_goal = TTS.Goal(text=self._current_rag_response)
+    tts_result = self._send_action_goal_sync(self.tts_action_client, tts_goal, timeout_sec=TIMEOUT_TTS_SEC)
+    
     self.state = ChatbotState.LISTENING
 
   def _state_error(self, error_message: str):
@@ -242,9 +223,8 @@ class EduChatbotPipelineManagerNode(Node):
     get_logger().info("[1/3] Connected to STT Action Server.")
     self.rag_action_client.wait_for_server()
     get_logger().info("[2/3] Connected to RAG Action Server.")
-    # self.tts_action_client.wait_for_server()
-    self.tts_service_client.wait_for_service()
-    get_logger().info("[3/3] Connected to TTS Service.")
+    self.tts_action_client.wait_for_server()
+    get_logger().info("[3/3] Connected to TTS Action Server.")
     get_logger().info("All external servers active. Activating pipeline...")
 
     #TODO: Cancel outstanding actions if pipeline was previously disabled mid-execution
