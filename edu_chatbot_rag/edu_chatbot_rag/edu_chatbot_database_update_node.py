@@ -3,11 +3,17 @@ from datetime import datetime
 import rclpy
 from rclpy.node import Node
 
-from .edu_chatbot.database.database_update_service import DatabaseUpdateService
+from .edu_chatbot.database.database_update_service import DatabaseUpdateService, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
 from .ros_logging_adapter import setup_ros_logging
 
 NODE_NAME = 'database_update_node'
+
 WIPE_PARAM_NAME = 'wipe_database'
+CHUNK_SIZE_PARAM_NAME = 'chunk_size'
+OVERLAP_PARAM_NAME = 'chunk_overlap'
+
+DEFAULT_WIPE_DATABASE = False
+
 
 def get_logger():
   return rclpy.logging.get_logger(NODE_NAME)
@@ -19,17 +25,24 @@ def main():
   # Bridge Python logging to ROS logging for the edu_chatbot module
   setup_ros_logging(node_name=NODE_NAME)
 
-  node.declare_parameter(WIPE_PARAM_NAME, False)
+  node.declare_parameter(WIPE_PARAM_NAME, DEFAULT_WIPE_DATABASE)
+  node.declare_parameter(CHUNK_SIZE_PARAM_NAME, DEFAULT_CHUNK_SIZE)
+  node.declare_parameter(OVERLAP_PARAM_NAME, DEFAULT_CHUNK_OVERLAP)
+
   wipe_database = bool(node.get_parameter(WIPE_PARAM_NAME).value)
+  chunk_size = int(node.get_parameter(CHUNK_SIZE_PARAM_NAME).value)
+  chunk_overlap = int(node.get_parameter(OVERLAP_PARAM_NAME).value)
 
   get_logger().info(
     f'Loaded parameters:\n'
-    f'  wipe_database: {wipe_database}'
+    f'  wipe_database: {wipe_database}\n'
+    f'  chunk_size: {chunk_size}\n'
+    f'  chunk_overlap: {chunk_overlap}'
   )
   
   try:  
     # Init DatabaseUpdateService (uses LlamaIndex internally for ChromaDB and Ollama embedding)
-    ingestion_service = DatabaseUpdateService()
+    ingestion_service = DatabaseUpdateService(chunk_size=chunk_size,chunk_overlap=chunk_overlap)
     
     if not ingestion_service.ping():
       get_logger().error('Failed to connect to LLM or database services. Exiting.')

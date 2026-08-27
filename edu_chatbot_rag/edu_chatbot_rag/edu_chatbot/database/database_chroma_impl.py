@@ -68,7 +68,7 @@ class ChromaDatabase(DatabaseIface):
     collection = self.get_collection()
     collection.add(ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas)
 
-  def query(self, query_embedding: list, top_k: int) -> list[DatabaseEntry]:
+  def query(self, query_embedding: list, top_k: int, relevance_threshold: float) -> list[DatabaseEntry]:
     """Query the database for the most similar embeddings."""
 
     collection = self.get_collection()
@@ -78,10 +78,20 @@ class ChromaDatabase(DatabaseIface):
     # ChromaDB returns nested lists: {'ids': [['id1', 'id2']], ...}
     # Access the first (and only) query result with [0]
     for i in range(len(results['ids'][0])):
-      entries.append(DatabaseEntry(
-        id=results['ids'][0][i],
-        document=results['documents'][0][i],
-        embedding=results['embeddings'][0][i] if results['embeddings'] else None,
-        metadata=results['metadatas'][0][i]
+      distance = results['distances'][0][i]
+      score = 1.0 - distance
+
+      logger.debug(f"Retrieved chunk {results['ids'][0][i]}: "f"distance={distance:.4f}, score={score:.4f}")
+      if score < relevance_threshold:
+        continue
+
+      entries.append((
+        DatabaseEntry(
+          id=results['ids'][0][i],
+          document=results['documents'][0][i],
+          embedding=results['embeddings'][0][i] if results['embeddings'] else None,
+          metadata=results['metadatas'][0][i],
+          score=score
+        )
       ))
     return entries

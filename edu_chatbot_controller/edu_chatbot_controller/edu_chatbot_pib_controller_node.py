@@ -16,12 +16,13 @@ from audio_common_msgs.action import TTS
 
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
-DEFAULT_WAKEUP_KEYWORDS = ['Hello Pib', 'Hello Robot', 'Hey Pib', 'Hey Robot']
-DEFAULT_LOG_TO_FILE     = False
-DEFAULT_START_ENABLED   = True
-DEFAULT_STT_TOPIC       = '/whisper/listen'
-DEFAULT_RAG_TOPIC       = '/rag/query'
-DEFAULT_TTS_TOPIC       = '/piper/say'
+DEFAULT_WAKEUP_KEYWORDS              = ['Hello Pib', 'Hello Robot', 'Hey Pib', 'Hey Robot', 'Good morning Pib', 'Good morning Robot', 'Good afternoon Pib', 'Good afternoon Robot', 'Good evening Pib', 'Good evening Robot']
+DEFAULT_KEYWORD_SIMILARITY_THRESHOLD = 75
+DEFAULT_LOG_TO_FILE                  = False
+DEFAULT_START_ENABLED                = True
+DEFAULT_STT_TOPIC                    = '/whisper/listen'
+DEFAULT_RAG_TOPIC                    = '/rag/query'
+DEFAULT_TTS_TOPIC                    = '/piper/say'
 
 # Timeout limits in seconds, None means no timeout (wait indefinitely)
 TIMEOUT_STT_SEC = None
@@ -47,6 +48,9 @@ class EduChatbotPipelineManagerNode(Node):
     self.declare_parameter('wakeup_keywords', DEFAULT_WAKEUP_KEYWORDS)
     self.wakeup_keywords = self.get_parameter('wakeup_keywords').get_parameter_value().string_array_value
 
+    self.declare_parameter('keyword_similarity_threshold', DEFAULT_KEYWORD_SIMILARITY_THRESHOLD)
+    self.keyword_similarity_threshold = self.get_parameter('keyword_similarity_threshold').get_parameter_value().integer_value
+
     self.declare_parameter('log_to_file', DEFAULT_LOG_TO_FILE)
     self.log_to_file = self.get_parameter('log_to_file').get_parameter_value().bool_value
 
@@ -60,6 +64,7 @@ class EduChatbotPipelineManagerNode(Node):
     get_logger().info(
       f'Loaded parameters:\n'
       f'  wakeup_keywords: {self.wakeup_keywords}\n'
+      f'  keyword_similarity_threshold: {self.keyword_similarity_threshold}\n'
       f'  log_to_file: {self.log_to_file}\n'
       f'  start_enabled: {self.pipeline_enabled}\n'
       f'  stt_topic: {self.get_parameter("stt_topic").get_parameter_value().string_value}\n'
@@ -133,7 +138,7 @@ class EduChatbotPipelineManagerNode(Node):
   # ---------------------------------------------------------------------------
   # State Handlers
   # ---------------------------------------------------------------------------
-  def process_transcription(self, text: str, score_cutoff: int = 75):
+  def process_transcription(self, text: str, score_cutoff: int = DEFAULT_KEYWORD_SIMILARITY_THRESHOLD) -> (bool, str):
     """
     Finds the best matching wakeword in `text` and returns the sub-string AFTER it.
     """
@@ -173,7 +178,7 @@ class EduChatbotPipelineManagerNode(Node):
     stt_res = self._send_action_goal_sync(self.stt_action_client, stt_goal, timeout_sec=TIMEOUT_STT_SEC)
     get_logger().info(f"STT Result: '{stt_res.transcription.text}'")
 
-    found, action_text = self.process_transcription(stt_res.transcription.text)
+    found, action_text = self.process_transcription(stt_res.transcription.text, self.keyword_similarity_threshold)
     if found:
       if len(action_text) > 10:
         get_logger().info(f"Wakeword detected. User said: '{action_text}'")

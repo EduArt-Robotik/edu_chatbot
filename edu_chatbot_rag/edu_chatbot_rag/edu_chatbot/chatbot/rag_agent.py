@@ -5,10 +5,10 @@ from ..database.database_iface import DatabaseIface, DatabaseEntry
 
 logger = logging.getLogger('edu_chatbot')
 
-DEFAULT_MODEL_PERSONALITY = 'Answer directly and politely in 1 - 3 sentences without any meta-level comments.'
-#DEFAULT_RAG_INSTRUCTIONS  = 'Use ONLY the provided context to answer the query. If the information is not present in the context, say "I don\'t know".'
-DEFAULT_RAG_INSTRUCTIONS  = 'If possible use the above context to answer the query.'
+DEFAULT_MODEL_PERSONALITY = 'Answer the query politely and directly in 1 - 3 sentences.'
+DEFAULT_RAG_INSTRUCTIONS  = 'Use the context if it helps answer the query. Do not force information from the context into the answer.'
 DEFAULT_TOP_K = 3
+DEFAULT_RELEVANCE_THRESHOLD = 0.1
 
 class RagAgent:
   def __init__(
@@ -18,7 +18,8 @@ class RagAgent:
     database: DatabaseIface,
     top_k: int = DEFAULT_TOP_K,
     model_personality: str = DEFAULT_MODEL_PERSONALITY,
-    rag_instructions: str = DEFAULT_RAG_INSTRUCTIONS
+    rag_instructions: str = DEFAULT_RAG_INSTRUCTIONS,
+    relevance_threshold: float = DEFAULT_RELEVANCE_THRESHOLD
   ):
     self._llm = llm
     self._embedder = embedder
@@ -26,6 +27,7 @@ class RagAgent:
     self._top_k = top_k
     self._model_personality = model_personality
     self._rag_instructions = rag_instructions
+    self._relevance_threshold = relevance_threshold
 
   @property
   def model_personality(self) -> str:
@@ -76,11 +78,13 @@ class RagAgent:
     query_embedding = self._embedder.embed(query)
     
     # Retrieve relevant chunks from vector store
-    results = self._database.query(query_embedding=query_embedding, top_k=self._top_k)
+    results = self._database.query(query_embedding=query_embedding, top_k=self._top_k, relevance_threshold=self._relevance_threshold)
 
     # Extract text from retrieved entries and combine into context
-    context_chunks = [entry.document for entry in results]
-    context = '\n\n'.join(context_chunks)
+    context = None
+    if results:
+      context_chunks = [entry.document for entry in results]
+      context = '\n\n'.join(context_chunks)
 
     # Generate response with retrieved context
     prompt = self.generate_prompt(query=query, context=context)

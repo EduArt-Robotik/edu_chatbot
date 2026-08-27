@@ -9,6 +9,6 @@
       sample_rate: 16000
       frame_size_ms: 32
       threshold: 0.5
-      min_silence_ms: 512 #128
+      min_silence_ms: 1048
       speech_pad_ms: 32
       use_cuda: false

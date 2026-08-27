@@ -1,4 +1,5 @@
 # Piper node parameters
+# As a warning: The german piper voices all sound terrible
 /**:
   piper_node:
     ros__parameters:

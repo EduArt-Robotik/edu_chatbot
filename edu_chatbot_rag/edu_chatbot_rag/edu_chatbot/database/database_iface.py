@@ -8,6 +8,7 @@ class DatabaseEntry:
   document: str = ''
   embedding: list = None
   metadata: dict = None
+  score: float = 0.0
 
 
 class DatabaseIface(ABC):
@@ -35,12 +36,13 @@ class DatabaseIface(ABC):
     pass
 
   @abstractmethod
-  def query(self, query_embedding: list, top_k: int) -> list[DatabaseEntry]:
+  def query(self, query_embedding: list, top_k: int, relevance_threshold: float) -> list[DatabaseEntry]:
     """Query the database for the most similar embeddings.
 
     Args:
         query_embedding: The embedding to query against the database.
         top_k: The number of top results to return.
+        relevance_threshold: The minimum score threshold for results to be included.
 
     Returns:
         A list of the top_k most similar DatabaseEntry objects.

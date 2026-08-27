@@ -1,9 +1,16 @@
 # Ollama models to pull
 # Comment out lines with # to disable a model
 
+# === LLM Models ===
+#granite4.1:3b
+
+#deepseek-r1:1.5b
+
 llama3.2:1b
 llama3.2:3b
 
+#qwen models are generally too slow
+qwen3:1.7b
 #qwen3.5:0.8b
 #qwen3.5:2b
 #qwen3.5:4b
@@ -13,4 +20,5 @@ gemma3:1b
 #gemma4:e2b
 #gemma4:e4b
 
+# === Embedding Models ===
 nomic-embed-text

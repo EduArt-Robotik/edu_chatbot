@@ -7,7 +7,7 @@ from rclpy.action import ActionServer
 from edu_chatbot_msgs.action import Query
 
 from .edu_chatbot.chatbot.llm_ollama_impl import OllamaLlm, DEFAULT_LLM_MODEL, DEFAULT_LLM_TEMPERATURE, DEFAULT_EMBEDDING_MODEL
-from .edu_chatbot.chatbot.rag_agent import RagAgent, DEFAULT_TOP_K, DEFAULT_MODEL_PERSONALITY, DEFAULT_RAG_INSTRUCTIONS
+from .edu_chatbot.chatbot.rag_agent import RagAgent, DEFAULT_TOP_K, DEFAULT_MODEL_PERSONALITY, DEFAULT_RAG_INSTRUCTIONS, DEFAULT_RELEVANCE_THRESHOLD
 from .edu_chatbot.database.database_chroma_impl import ChromaDatabase
 from .ros_logging_adapter import setup_ros_logging
 
@@ -26,6 +26,7 @@ class EduChatbotRagNode(Node):
     
     # Declare ROS parameters with defaults
     self.declare_parameter('top_k', DEFAULT_TOP_K)
+    self.declare_parameter('relevance_threshold', DEFAULT_RELEVANCE_THRESHOLD)
     self.declare_parameter('llm_model', DEFAULT_LLM_MODEL)
     self.declare_parameter('temperature', DEFAULT_LLM_TEMPERATURE)
     self.declare_parameter('model_personality', DEFAULT_MODEL_PERSONALITY)
@@ -34,17 +35,19 @@ class EduChatbotRagNode(Node):
     self.declare_parameter('warm_up_pipeline', DEFAULT_WARM_UP)
 
     # Get parameters
-    top_k             = self.get_parameter('top_k').get_parameter_value().integer_value
-    llm_model         = self.get_parameter('llm_model').get_parameter_value().string_value
-    temperature       = self.get_parameter('temperature').get_parameter_value().double_value
-    model_personality = self.get_parameter('model_personality').get_parameter_value().string_value
-    rag_instructions  = self.get_parameter('rag_instructions').get_parameter_value().string_value
-    embedding_model   = self.get_parameter('embedding_model').get_parameter_value().string_value
-    warm_up_pipeline  = self.get_parameter('warm_up_pipeline').get_parameter_value().bool_value
+    top_k               = self.get_parameter('top_k').get_parameter_value().integer_value
+    relevance_threshold = self.get_parameter('relevance_threshold').get_parameter_value().double_value
+    llm_model           = self.get_parameter('llm_model').get_parameter_value().string_value
+    temperature         = self.get_parameter('temperature').get_parameter_value().double_value
+    model_personality   = self.get_parameter('model_personality').get_parameter_value().string_value
+    rag_instructions    = self.get_parameter('rag_instructions').get_parameter_value().string_value
+    embedding_model     = self.get_parameter('embedding_model').get_parameter_value().string_value
+    warm_up_pipeline    = self.get_parameter('warm_up_pipeline').get_parameter_value().bool_value
     
     get_logger().info(
       f'Loaded parameters:\n'
       f'  top_k: {top_k}\n'
+      f'  relevance_threshold: {relevance_threshold}\n'
       f'  llm_model: {llm_model}\n'
       f'  temperature: {temperature}\n'
       f'  model_personality: {model_personality}\n'
@@ -74,7 +77,8 @@ class EduChatbotRagNode(Node):
       database=chroma_db,
       top_k=top_k,
       model_personality=model_personality,
-      rag_instructions=rag_instructions
+      rag_instructions=rag_instructions,
+      relevance_threshold=relevance_threshold
     )
     
     if warm_up_pipeline:
@@ -132,8 +136,8 @@ class EduChatbotRagNode(Node):
 
     try:
       start_time = datetime.now()
-      result.response, context = self.rag_agent.query_rag(query=goal_handle.request.query)
-      self.get_logger().debug(f'RAG prompt:\n{context}')
+      result.response, prompt = self.rag_agent.query_rag(query=goal_handle.request.query)
+      self.get_logger().debug(f'RAG prompt:\n{prompt}')
       self.get_logger().debug(f'RAG response:\n{result.response}')
       self.get_logger().debug(f'RAG response time: {(datetime.now() - start_time).total_seconds()} seconds.')
       goal_handle.succeed()

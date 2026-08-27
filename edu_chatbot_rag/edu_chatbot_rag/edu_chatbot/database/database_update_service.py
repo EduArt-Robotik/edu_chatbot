@@ -19,6 +19,9 @@ DEFAULT_CHROMA_HOST = os.environ.get('CHROMA_HOST', 'localhost')
 DEFAULT_CHROMA_PORT = int(os.environ.get('CHROMA_PORT', '8000'))
 DEFAULT_INGESTION_CACHE_DIR = os.environ.get('INGESTION_CACHE_PATH', '/home/user/data')
 
+DEFAULT_CHUNK_SIZE = 512
+DEFAULT_CHUNK_OVERLAP = 128
+
 SUPPORTED_EXTENSIONS = [".txt", ".docx", ".pptx", ".md", ".pdf"]
 
 # ChromaDB HTTP client has payload size limits. With embeddings (~3KB each)
@@ -42,6 +45,8 @@ class DatabaseUpdateService:
       ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL,
       chroma_host: str = DEFAULT_CHROMA_HOST,
       chroma_port: int = DEFAULT_CHROMA_PORT,
+      chunk_size: int = DEFAULT_CHUNK_SIZE,
+      chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
   ):
     self._database_path = database_path
     self._collection_name = collection_name
@@ -60,7 +65,7 @@ class DatabaseUpdateService:
     # nodes are added to the vector store in batches in update_database()
     self._pipeline = IngestionPipeline(
       transformations=[
-        SentenceSplitter(chunk_size=1024, chunk_overlap=200),
+        SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap),
         self._embed_model,
       ],
       cache=IngestionCache(),
