@@ -14,6 +14,8 @@ from whisper_msgs.action import STT
 from edu_chatbot_msgs.action import Query
 from audio_common_msgs.action import TTS
 
+from .pib_interface import EduPipInterface
+
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
 DEFAULT_WAKEUP_KEYWORDS              = ['Hello Pib', 'Hello Robot', 'Hey Pib', 'Hey Robot', 'Good morning Pib', 'Good morning Robot', 'Good afternoon Pib', 'Good afternoon Robot', 'Good evening Pib', 'Good evening Robot']
@@ -28,6 +30,11 @@ DEFAULT_TTS_TOPIC                    = '/piper/say'
 TIMEOUT_STT_SEC = None
 TIMEOUT_RAG_SEC = 30.0
 TIMEOUT_TTS_SEC = 120.0
+
+# Face expressions
+FACE_EXPRESSION_LISTENING = "rick_neutral"
+FACE_EXPRESSION_THINKING  = "rick_thinking_hard"
+FACE_EXPRESSION_SPEAKING  = "rick_answering"
 
 def get_logger():
   return rclpy.logging.get_logger(NODE_NAME)
@@ -83,6 +90,10 @@ class EduChatbotPipelineManagerNode(Node):
     self.stt_action_client = ActionClient(self, STT, DEFAULT_STT_TOPIC)
     self.rag_action_client = ActionClient(self, Query, DEFAULT_RAG_TOPIC)
     self.tts_action_client = ActionClient(self, TTS, DEFAULT_TTS_TOPIC)
+
+    # Pib Interface
+    self.pib_interface = EduPipInterface(self)
+    self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
 
     # Services and Execution Thread
     self.enable_srv = self.create_service(SetBool, "enable_pipeline", self.enable_callback)
@@ -242,10 +253,13 @@ class EduChatbotPipelineManagerNode(Node):
 
       try:
         if self.state == ChatbotState.LISTENING:
+          self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
           self._state_listening()
         elif self.state == ChatbotState.THINKING:
+          self.pib_interface.set_face_expression(FACE_EXPRESSION_THINKING)
           self._state_thinking()
         elif self.state == ChatbotState.SPEAKING:
+          self.pib_interface.set_face_expression(FACE_EXPRESSION_SPEAKING)
           self._state_speaking()
 
       except Exception as exc:

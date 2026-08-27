@@ -47,13 +47,12 @@ WORKDIR /home/$USER/tmp
 RUN git clone https://github.com/mgonzs13/whisper_ros.git -b 4.0.7 --depth 1
 RUN cp -R /home/$USER/tmp/whisper_ros/whisper_msgs /home/$USER/ros2_ws/src/whisper_msgs
 
-WORKDIR /home/$USER/tmp
 RUN git clone https://github.com/mgonzs13/audio_common.git -b 4.0.10 --depth 1
 RUN cp -R /home/$USER/tmp/audio_common/audio_common_msgs /home/$USER/ros2_ws/src/audio_common_msgs
 
-# RUN git clone https://github.com/pib-rocks/pib-backend.git -b 0.6.0 --depth 1
-# RUN cp -R /home/$USER/tmp/pib-backend/ros_packages/datatypes /home/$USER/ros2_ws/src/datatypes
-# RUN rm -rf /home/$USER/tmp/
+RUN git clone https://github.com/pib-rocks/pib-backend.git -b v0.6.0 --depth 1
+RUN cp -R /home/$USER/tmp/pib-backend/ros_packages/datatypes /home/$USER/ros2_ws/src/datatypes
+RUN rm -rf /home/$USER/tmp/
 
 WORKDIR /home/$USER/ros2_ws
 COPY --chown=$USER ./edu_chatbot_controller /home/$USER/ros2_ws/src/edu_chatbot_controller
