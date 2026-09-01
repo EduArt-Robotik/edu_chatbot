@@ -12,7 +12,7 @@ WIPE_PARAM_NAME = 'wipe_database'
 CHUNK_SIZE_PARAM_NAME = 'chunk_size'
 OVERLAP_PARAM_NAME = 'chunk_overlap'
 
-DEFAULT_WIPE_DATABASE = False
+DEFAULT_WIPE_DATABASE = True
 
 
 def get_logger():
