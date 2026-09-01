@@ -14,7 +14,7 @@ from whisper_msgs.action import STT
 from edu_chatbot_msgs.action import Query
 from audio_common_msgs.action import TTS
 
-from .pib_interface import EduPipInterface
+from .pib_interface import EduPipInterface, PoseCategory
 
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
@@ -93,7 +93,11 @@ class EduChatbotPipelineManagerNode(Node):
 
     # Pib Interface
     self.pib_interface = EduPipInterface(self)
-    self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+    try:
+      self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+      self.pib_interface.move_to_random_pose(PoseCategory.NEUTRAL)
+    finally:
+      pass
 
     # Services and Execution Thread
     self.enable_srv = self.create_service(SetBool, "enable_pipeline", self.enable_callback)
@@ -253,13 +257,25 @@ class EduChatbotPipelineManagerNode(Node):
 
       try:
         if self.state == ChatbotState.LISTENING:
-          self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+          try:
+            self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+            self.pib_interface.move_to_random_pose(PoseCategory.NEUTRAL)
+          finally:
+            pass
           self._state_listening()
         elif self.state == ChatbotState.THINKING:
-          self.pib_interface.set_face_expression(FACE_EXPRESSION_THINKING)
+          try:
+            self.pib_interface.set_face_expression(FACE_EXPRESSION_THINKING)
+            self.pib_interface.move_to_random_pose(PoseCategory.THINKING)
+          finally:
+            pass
           self._state_thinking()
         elif self.state == ChatbotState.SPEAKING:
-          self.pib_interface.set_face_expression(FACE_EXPRESSION_SPEAKING)
+          try:
+            self.pib_interface.set_face_expression(FACE_EXPRESSION_SPEAKING)
+            self.pib_interface.move_to_random_pose(PoseCategory.SPEAKING)
+          finally:
+            pass
           self._state_speaking()
 
       except Exception as exc:
