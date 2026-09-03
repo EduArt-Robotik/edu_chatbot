@@ -11,7 +11,7 @@ from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import String
 from datatypes.action import MoveToPose
 
-
+# Robot Poses
 class PoseCategory(Enum):
     NEUTRAL = "neutral"
     THINKING = "thinking"
@@ -26,6 +26,22 @@ ROBOT_POSE_KEYS = {
 POSE_COUNT_NEUTRAL   = 5
 POSE_COUNT_THINKING  = 3
 POSE_COUNT_SPEAKING  = 7
+
+# Facial Expressions
+class FaceCategory(Enum):
+    NEUTRAL = "neutral"
+    THINKING = "thinking"
+    SPEAKING = "speaking"
+
+ROBOT_FACE_KEYS = {
+  FaceCategory.NEUTRAL: "Infinity_Listening",
+  FaceCategory.THINKING: "Infinity_Thinking",
+  FaceCategory.SPEAKING: "Infinity_Speaking",
+}
+
+FACE_COUNT_NEUTRAL   = 5
+FACE_COUNT_THINKING  = 6
+FACE_COUNT_SPEAKING  = 3
 
 DEFAULT_PIB_FACE_EXPRESSION_TOPIC = "/pib/expression"
 DEFAULT_PIB_FACE_TEXT_TOPIC       = "/pib/display_text"
@@ -42,6 +58,15 @@ def random_pose(category: PoseCategory) -> str:
   else:
     raise ValueError(f"Unknown pose category: {category}")
 
+def random_face(category: FaceCategory) -> str:
+  if category == FaceCategory.NEUTRAL:
+    return f"{ROBOT_FACE_KEYS[FaceCategory.NEUTRAL]}{random.randint(1, FACE_COUNT_NEUTRAL)}"
+  elif category == FaceCategory.THINKING:
+    return f"{ROBOT_FACE_KEYS[FaceCategory.THINKING]}{random.randint(1, FACE_COUNT_THINKING)}"
+  elif category == FaceCategory.SPEAKING:
+    return f"{ROBOT_FACE_KEYS[FaceCategory.SPEAKING]}{random.randint(1, FACE_COUNT_SPEAKING)}"
+  else:
+    raise ValueError(f"Unknown face category: {category}")
 
 class EduPipInterface():
   def __init__(self, node : Node):
@@ -56,6 +81,9 @@ class EduPipInterface():
     msg.data = expression
     self.pub_face_expression.publish(msg)
     self.node.get_logger().info(f"Set face expression to: {expression}")
+
+  def set_random_face_expression(self, category: FaceCategory = FaceCategory.NEUTRAL):
+    self.set_face_expression(random_face(category))
 
   def set_face_text(self, text : str):
     msg = String()

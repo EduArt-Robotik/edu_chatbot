@@ -14,7 +14,7 @@ from whisper_msgs.action import STT
 from edu_chatbot_msgs.action import Query
 from audio_common_msgs.action import TTS
 
-from .pib_interface import EduPipInterface, PoseCategory
+from .pib_interface import EduPipInterface, PoseCategory, FaceCategory
 
 NODE_NAME = 'edu_chatbot_pipeline_manager_node'
 
@@ -30,11 +30,6 @@ DEFAULT_TTS_TOPIC                    = '/piper/say'
 TIMEOUT_STT_SEC = None
 TIMEOUT_RAG_SEC = 30.0
 TIMEOUT_TTS_SEC = 120.0
-
-# Face expressions
-FACE_EXPRESSION_LISTENING = "rick_neutral"
-FACE_EXPRESSION_THINKING  = "rick_thinking_hard"
-FACE_EXPRESSION_SPEAKING  = "rick_answering"
 
 def get_logger():
   return rclpy.logging.get_logger(NODE_NAME)
@@ -94,7 +89,7 @@ class EduChatbotPipelineManagerNode(Node):
     # Pib Interface
     self.pib_interface = EduPipInterface(self)
     try:
-      self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+      self.pib_interface.set_random_face_expression(FaceCategory.NEUTRAL)
       self.pib_interface.move_to_random_pose(PoseCategory.NEUTRAL)
     finally:
       pass
@@ -258,21 +253,21 @@ class EduChatbotPipelineManagerNode(Node):
       try:
         if self.state == ChatbotState.LISTENING:
           try:
-            self.pib_interface.set_face_expression(FACE_EXPRESSION_LISTENING)
+            self.pib_interface.set_random_face_expression(FaceCategory.NEUTRAL)
             self.pib_interface.move_to_random_pose(PoseCategory.NEUTRAL)
           finally:
             pass
           self._state_listening()
         elif self.state == ChatbotState.THINKING:
           try:
-            self.pib_interface.set_face_expression(FACE_EXPRESSION_THINKING)
+            self.pib_interface.set_random_face_expression(FaceCategory.THINKING)
             self.pib_interface.move_to_random_pose(PoseCategory.THINKING)
           finally:
             pass
           self._state_thinking()
         elif self.state == ChatbotState.SPEAKING:
           try:
-            self.pib_interface.set_face_expression(FACE_EXPRESSION_SPEAKING)
+            self.pib_interface.set_random_face_expression(FaceCategory.SPEAKING)
             self.pib_interface.move_to_random_pose(PoseCategory.SPEAKING)
           finally:
             pass
