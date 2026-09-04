@@ -6,4 +6,4 @@
       format: 1
       channels: 1
       rate: 16000 # 48000
-      chunk: 512
+      chunk: 1280 # 80 ms chunks for best performance of openWakeWord
