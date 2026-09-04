@@ -18,6 +18,13 @@ RUN apt-get update && \
     rosdep install --from-paths src --ignore-src -r -y && \
     rm -rf /var/lib/apt/lists/*
 
+# Fix: replace QoS settings for audio capturer node to make sure no audio chunks are lost
+RUN grep -q 'rclcpp::SensorDataQoS()' \
+        src/audio_common/audio_common/src/audio_common/audio_capturer_node.cpp \
+    && sed -i \
+        's/rclcpp::SensorDataQoS()/rclcpp::QoS(10).reliable()/' \
+        src/audio_common/audio_common/src/audio_common/audio_capturer_node.cpp
+
 # Install CUDA toolkit (optional)
 ARG USE_CUDA=1
 ARG CUDA_VERSION=13-2
