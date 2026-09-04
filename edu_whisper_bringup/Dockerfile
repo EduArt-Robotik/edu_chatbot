@@ -47,11 +47,15 @@ ARG CMAKE_BUILD_TYPE=Release
 ARG USE_CUDA=1
 
 ENV PATH=/usr/local/cuda/bin:${PATH}
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
 
 # whisper_cpp_vendor compiles ~20 minutes on jetson orin nano, building it separate to avoid rebuilding when other packages in the ws fail to build
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    colcon build --symlink-install --packages-select whisper_cpp_vendor --cmake-args --cmake-args -DGGML_CUDA=ON -DGGML_CUDA_NO_VMM=ON -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    if [ "$USE_CUDA" = "1" ]; then \
+        colcon build --symlink-install --packages-select whisper_cpp_vendor --cmake-args -DGGML_CUDA=ON -DGGML_CUDA_NO_VMM=ON -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}; \
+    else \
+        colcon build --symlink-install --packages-select whisper_cpp_vendor --cmake-args -DGGML_CUDA=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}; \
+    fi
 
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
     if [ "$USE_CUDA" = "1" ]; then \
