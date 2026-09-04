@@ -9,6 +9,16 @@ services:
               count: all
     runtime: nvidia # Special requirement for Nvidia Jetson
 
+  edu-chatbot-wakeword:
+    deploy: # Support for general Nvidia GPUS
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: all
+    runtime: nvidia # Special requirement for Nvidia Jetson
+
   edu-chatbot-stt:
     build:
       args:
