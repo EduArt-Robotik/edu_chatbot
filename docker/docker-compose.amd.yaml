@@ -1,4 +1,8 @@
 services:
+  edu_ros_base:
+    build:
+      target: base-amd
+
   edu-chatbot-llm:
     devices:
       - /dev/dri:/dev/dri

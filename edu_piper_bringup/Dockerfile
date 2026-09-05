@@ -1,26 +1,19 @@
-ARG ROS_DISTRO=jazzy
-FROM ros:${ROS_DISTRO} AS deps
+ARG BASE_IMAGE=edu_ros_base:latest
+FROM ${BASE_IMAGE} AS deps
 
 SHELL ["/bin/bash", "-c"]
+
+USER root
 
 # Copy sources and import dependencies via vcs
 WORKDIR /root/ros2_ws
 COPY edu_piper_bringup/dependencies.repos src/dependencies.repos
-RUN apt-get update && \
-    apt-get install -y python3-vcstool && \
-    vcs import src < src/dependencies.repos && \
-    rm -rf /var/lib/apt/lists/*
+RUN vcs import src < src/dependencies.repos
 
 # Install ROS dependencies
 RUN apt-get update && \
     rosdep update --include-eol-distros && \
     rosdep install --from-paths src --ignore-src -r -y && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && \
-    apt install -y \
-    alsa-utils \
-    libasound2-plugins && \
     rm -rf /var/lib/apt/lists/*
 
 # Build the workspace with colcon

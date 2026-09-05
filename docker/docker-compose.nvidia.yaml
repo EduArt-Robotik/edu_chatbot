@@ -1,4 +1,10 @@
 services:
+  edu_ros_base:
+    build:
+      target: base-cuda
+      args:
+        CUDA_VERSION: "13-2"
+
   edu-chatbot-llm:
     deploy: # Support for general Nvidia GPUS
       resources:
@@ -10,6 +16,9 @@ services:
     runtime: nvidia # Special requirement for Nvidia Jetson
 
   edu-chatbot-wakeword:
+    build:
+      args:
+        BASE_IMAGE: edu_ros_base:latest
     deploy: # Support for general Nvidia GPUS
       resources:
         reservations:
@@ -22,8 +31,8 @@ services:
   edu-chatbot-stt:
     build:
       args:
+        BASE_IMAGE: edu_ros_base:latest
         USE_CUDA: "1"
-        CUDA_VERSION: "13-2"
     deploy: # Support for general Nvidia GPUS
       resources:
         reservations:

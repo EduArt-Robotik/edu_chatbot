@@ -1,4 +1,12 @@
 services:
+  edu_ros_base:
+    image: edu_ros_base:latest
+    build:
+      context: .
+      dockerfile: ./docker/base/Dockerfile
+      target: base-cpu
+    restart: "no"
+
   edu-chatbot-llm:
     image: edu_ollama:latest
     build:

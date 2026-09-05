@@ -1,23 +1,9 @@
-FROM ros:jazzy-ros-base AS base
-
-ENV USER=user
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Rename the current user
-RUN usermod -l $USER ubuntu \
-  && groupmod -n $USER ubuntu \
-  && usermod -d /home/$USER -m $USER \
-  && usermod -c "user" $USER \
-  && echo "$USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USER \
-  && chmod 0440 /etc/sudoers.d/$USER
+ARG BASE_IMAGE=edu_ros_base:latest
+FROM ${BASE_IMAGE} AS base
 
 USER root
 
-# Install packages
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-  python3-pip
-
+# Install Python packages for RAG
 RUN pip install --break-system-packages --ignore-installed \
     ollama \
     chromadb \
@@ -30,20 +16,11 @@ RUN pip install --break-system-packages --ignore-installed \
     llama-index-embeddings-ollama \
     llama-index-vector-stores-chroma
 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Set permissions for the cache directory
-RUN mkdir -p /home/user/data && chown -R user:user /home/user/data
-
-# User space configuration
 USER $USER
 
 # Activate color output in terminal
 RUN echo "export TERM=xterm-256color" >> /home/$USER/.bashrc \
   && echo "export PS1=\"\[\e[96m\]CHATBOT RAG \[\e[0m\]${debian_chroot:+($debian_chroot)}\[\e[32;1m\]\u@\h\[\e[0m\]:\[\e[34;1m\]\w \$\[\e[0m\]\"" >> /home/$USER/.bashrc
-
-ENV TERM=xterm-256color
-ENV color_prompt=yes
 
 FROM base AS build
 
@@ -58,8 +35,8 @@ RUN bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-in
 FROM build AS final
 
 # Source ROS files
-RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
-RUN echo "source ~/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc \
+  && echo "source ~/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
 
 # Add entry point
 COPY --chown=$USER ./edu_chatbot_rag/docker/entrypoint /home/$USER/

@@ -1,16 +1,15 @@
-ARG ROS_DISTRO=jazzy
-FROM ros:${ROS_DISTRO} AS deps
+ARG BASE_IMAGE=edu_ros_base:latest
+FROM ${BASE_IMAGE} AS deps
 
 SHELL ["/bin/bash", "-c"]
+
+USER root
 
 # Copy sources and import dependencies via vcs
 WORKDIR /root/ros2_ws
 
 COPY edu_whisper_bringup/dependencies.repos src/dependencies.repos
-RUN apt-get update && \
-    apt-get install -y python3-vcstool && \
-    vcs import src < src/dependencies.repos && \
-    rm -rf /var/lib/apt/lists/*
+RUN vcs import src < src/dependencies.repos
 
 COPY whisper_ros src/whisper_ros
 
@@ -27,29 +26,10 @@ RUN grep -q 'rclcpp::SensorDataQoS()' \
         's/rclcpp::SensorDataQoS()/rclcpp::QoS(10).reliable()/' \
         src/audio_common/audio_common/src/audio_common/audio_capturer_node.cpp
 
-# Install CUDA toolkit (optional)
-ARG USE_CUDA=1
-ARG CUDA_VERSION=13-2
-
-RUN if [ "$USE_CUDA" = "1" ]; then \
-    apt-get update && apt-get install -y \
-    wget \
-    ca-certificates && \
-    wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/sbsa/cuda-keyring_1.1-1_all.deb && \
-    dpkg -i cuda-keyring_1.1-1_all.deb && \
-    rm cuda-keyring_1.1-1_all.deb && \
-    apt-get update && \
-    apt-get install -y cuda-toolkit-${CUDA_VERSION} && \
-    rm -rf /var/lib/apt/lists/*; \
-    fi
-
 # Build the workspace with colcon
 FROM deps AS builder
 ARG CMAKE_BUILD_TYPE=Release
-ARG USE_CUDA=1
-
-ENV PATH=/usr/local/cuda/bin:${PATH}
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
+ARG USE_CUDA=0
 
 # whisper_cpp_vendor compiles ~20 minutes on jetson orin nano, building it separate to avoid rebuilding when other packages in the ws fail to build
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
