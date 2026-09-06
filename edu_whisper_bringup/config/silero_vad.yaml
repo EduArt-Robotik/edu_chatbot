@@ -3,6 +3,9 @@
   silero_vad_node:
     ros__parameters:
       enabled: false
+      use_wakeword_trigger: true
+      wakeword_topic: "/wakeword/trigger"
+      wakeword_recording_timeout_sec: 6.0
       model_repo: "mgonzs13/silero-vad-onnx"
       model_filename: "silero_vad.onnx"
       model_path: ""

@@ -12,6 +12,8 @@ RUN apt-get update && \
     vcs import src < src/dependencies.repos && \
     rm -rf /var/lib/apt/lists/*
 
+COPY whisper_ros src/whisper_ros
+
 # Install ROS dependencies
 RUN apt-get update && \
     rosdep update --include-eol-distros && \
