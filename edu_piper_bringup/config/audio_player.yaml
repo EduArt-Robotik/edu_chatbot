@@ -2,4 +2,4 @@
   player_node:
     ros__parameters:
       channels: 1
-      device: 0
+      device: -1
