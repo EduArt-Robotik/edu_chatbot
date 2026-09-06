@@ -34,7 +34,7 @@
         carry_initial_prompt: false
         suppress_regex: ""
         suppress_blank: true
-        suppress_nst: false
+        suppress_nst: true
 
       # Token timestamps parameters
       token_timestamps:

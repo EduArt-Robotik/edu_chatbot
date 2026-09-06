@@ -22,7 +22,7 @@ def generate_launch_description():
                 launch_arguments={
                     "stream": "True",
                     "whisper_params_file": os.path.join(
-                        config_dir, "whisper_spanish_stream.yaml"
+                        config_dir, "whisper_german_stream.yaml"
                     ),
                 }.items(),
             )

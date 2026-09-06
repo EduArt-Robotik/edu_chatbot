@@ -76,6 +76,9 @@ private:
   /// The transcription message containing the converted text.
   whisper_msgs::msg::Transcription transcription_msg;
 
+  /// Whether a VAD segment has been transcribed for the active goal.
+  bool transcription_received_ = false;
+
   /// Mutex for synchronizing access to the transcription message.
   std::mutex transcription_mutex;
 
