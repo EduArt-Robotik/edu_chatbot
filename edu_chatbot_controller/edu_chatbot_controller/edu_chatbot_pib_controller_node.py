@@ -24,6 +24,7 @@ DEFAULT_WAKEUP_KEYWORDS              = ['Hello Pib', 'Hello Robot', 'Hey Pib', '
 DEFAULT_KEYWORD_SIMILARITY_THRESHOLD = 75
 DEFAULT_LOG_TO_FILE                  = False
 DEFAULT_START_ENABLED                = True
+DEFAULT_MIN_TRANSCRIPTION_LENGTH     = 10
 DEFAULT_STT_TOPIC                    = '/whisper/listen'
 DEFAULT_RAG_TOPIC                    = '/rag/query'
 DEFAULT_TTS_TOPIC                    = '/piper/say'
@@ -63,6 +64,9 @@ class EduChatbotPipelineManagerNode(Node):
     self.declare_parameter('start_enabled', DEFAULT_START_ENABLED)
     self.pipeline_enabled = self.get_parameter('start_enabled').get_parameter_value().bool_value
 
+    self.declare_parameter('min_transcription_length', DEFAULT_MIN_TRANSCRIPTION_LENGTH)
+    self.min_transcription_length = self.get_parameter('min_transcription_length').get_parameter_value().integer_value
+
     self.declare_parameter('stt_topic', DEFAULT_STT_TOPIC)
     self.declare_parameter('rag_topic', DEFAULT_RAG_TOPIC)
     self.declare_parameter('tts_topic', DEFAULT_TTS_TOPIC)
@@ -80,6 +84,7 @@ class EduChatbotPipelineManagerNode(Node):
       f'  keyword_similarity_threshold: {self.keyword_similarity_threshold}\n'
       f'  log_to_file: {self.log_to_file}\n'
       f'  start_enabled: {self.pipeline_enabled}\n'
+      f'  min_transcription_length: {self.min_transcription_length}\n'
       f'  stt_topic: {self.stt_topic}\n'
       f'  rag_topic: {self.rag_topic}\n'
       f'  tts_topic: {self.tts_topic}\n'
@@ -140,8 +145,9 @@ class EduChatbotPipelineManagerNode(Node):
     return response
 
   def wakeword_callback(self, msg):
-    get_logger().info("Wakeword detected.", once=True)
-    self._wakeword_trigger.set()
+    if self.state == ChatbotState.WAITING:
+      get_logger().info("Wakeword detected.", once=True)
+      self._wakeword_trigger.set()
 
 
   # ---------------------------------------------------------------------------
@@ -266,13 +272,21 @@ class EduChatbotPipelineManagerNode(Node):
 
     stt_res = self._wait_for_stt_result()
     get_logger().info(f"STT Result: '{stt_res.transcription.text}'")
+    transcription_text = stt_res.transcription.text.strip()
 
-    if not stt_res.transcription.text.strip():
+    if not transcription_text:
       get_logger().info("No speech transcribed after wakeword. Returning to WAITING state.")
       self.state = ChatbotState.WAITING
       return
 
-    self._current_user_text = stt_res.transcription.text
+    if len(transcription_text) < self.min_transcription_length:
+      get_logger().info(
+        f"Transcription shorter than min_transcription_length ({self.min_transcription_length}). Returning to WAITING state."
+      )
+      self.state = ChatbotState.WAITING
+      return
+
+    self._current_user_text = transcription_text
     self.state = ChatbotState.THINKING
 
     # Placeholder for testing
