@@ -1,0 +1,18 @@
+services:
+  wakeword-train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      sh -c "livekit-wakeword setup --config prod_hello_robot.yaml &&
+             livekit-wakeword run prod_hello_robot.yaml"
