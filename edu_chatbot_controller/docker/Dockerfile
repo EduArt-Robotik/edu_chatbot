@@ -1,5 +1,4 @@
-ARG BASE_IMAGE=edu_ros_base:latest
-FROM ${BASE_IMAGE} AS base
+FROM edu_ros_base:latest AS base
 
 USER root
 
