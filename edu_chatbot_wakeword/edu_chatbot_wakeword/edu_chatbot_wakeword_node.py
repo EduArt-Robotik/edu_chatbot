@@ -10,16 +10,17 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, HistoryPolicy
 
+from std_msgs.msg import Header
 from audio_common_msgs.msg import AudioStamped
 
 
 NODE_NAME = 'edu_chatbot_wakeword_node'
 
-DEFAULT_DEBOUNCE_TIME                = 1.0
-DEFAULT_SCORE_THRESHOLD              = 0.05
+DEFAULT_DEBOUNCE_TIME                = 2.0
+DEFAULT_SCORE_THRESHOLD              = 0.04
 DEFAULT_INPUT_TOPIC                  = '/audio/in'
-DEFAULT_OUTPUT_TOPIC                 = '/wakeword/output'
-DEFAULT_MODEL_NAME                   = 'hey_rick.onnx'
+DEFAULT_OUTPUT_TOPIC                 = '/wakeword/trigger'
+DEFAULT_MODEL_NAME                   = 'hello_robot.onnx'
 
 
 def get_logger():
@@ -37,6 +38,9 @@ class EduWakewordDetector(Node):
     self.declare_parameter('input_topic', DEFAULT_INPUT_TOPIC)
     self.input_topic = self.get_parameter('input_topic').get_parameter_value().string_value
 
+    self.declare_parameter('output_topic', DEFAULT_OUTPUT_TOPIC)
+    self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
+
     self.declare_parameter('score_threshold', DEFAULT_SCORE_THRESHOLD)
     self.score_threshold = self.get_parameter('score_threshold').get_parameter_value().double_value
 
@@ -51,7 +55,8 @@ class EduWakewordDetector(Node):
       f'  debounce_time: {self.debounce_time}\n'
       f'  score_threshold: {self.score_threshold}\n'
       f'  model_name: {self.model_name}\n'
-      f'  input_topic: {self.input_topic}' 
+      f'  input_topic: {self.input_topic}\n'
+      f'  output_topic: {self.output_topic}'
     )
 
     get_logger().info('Loading wakeword model.')
@@ -59,17 +64,23 @@ class EduWakewordDetector(Node):
     model_count = len(self.model.models.keys())
     print(f"Loaded {model_count} wakeword models.")
     
-    #qos_profile = QoSProfile(
-    #  reliability=ReliabilityPolicy.RELIABLE,
-    #  history=HistoryPolicy.KEEP_LAST,
-    #  depth=10
-    #)
+    qos_profile = QoSProfile(
+     reliability=ReliabilityPolicy.RELIABLE,
+     history=HistoryPolicy.KEEP_LAST,
+     depth=10
+    )
+
+    self.trigger_pub = self.create_publisher(
+      Header,
+      self.output_topic,
+      qos_profile
+    )
 
     self.subscription = self.create_subscription(
       AudioStamped,
       self.input_topic,
       self.audio_callback,
-      qos_profile_sensor_data #qos_profile
+      qos_profile
     )
 
     get_logger().info(f'{NODE_NAME} initialized successfully.')
@@ -99,6 +110,7 @@ class EduWakewordDetector(Node):
         if current_time - self.last_detection_time >= self.debounce_time:
           get_logger().info(f"Wakeword detected by model '{model}' with score {score:.3f}")
           self.last_detection_time = current_time
+          self.trigger_pub.publish(msg.header)
 
 
 def main():

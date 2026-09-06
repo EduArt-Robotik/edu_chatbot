@@ -30,16 +30,19 @@ POSE_COUNT_SPEAKING  = 7
 # Facial Expressions
 class FaceCategory(Enum):
     NEUTRAL = "neutral"
+    LISTENING = "listening"
     THINKING = "thinking"
     SPEAKING = "speaking"
 
 ROBOT_FACE_KEYS = {
-  FaceCategory.NEUTRAL: "Infinity_Listening",
+  FaceCategory.NEUTRAL: "Infinity_Neutral",
+  FaceCategory.LISTENING: "Infinity_Listening",
   FaceCategory.THINKING: "Infinity_Thinking",
   FaceCategory.SPEAKING: "Infinity_Speaking",
 }
 
-FACE_COUNT_NEUTRAL   = 5
+FACE_COUNT_NEUTRAL   = 1
+FACE_COUNT_LISTENING = 5
 FACE_COUNT_THINKING  = 6
 FACE_COUNT_SPEAKING  = 3
 
@@ -61,6 +64,8 @@ def random_pose(category: PoseCategory) -> str:
 def random_face(category: FaceCategory) -> str:
   if category == FaceCategory.NEUTRAL:
     return f"{ROBOT_FACE_KEYS[FaceCategory.NEUTRAL]}{random.randint(1, FACE_COUNT_NEUTRAL)}"
+  elif category == FaceCategory.LISTENING:
+    return f"{ROBOT_FACE_KEYS[FaceCategory.LISTENING]}{random.randint(1, FACE_COUNT_LISTENING)}"
   elif category == FaceCategory.THINKING:
     return f"{ROBOT_FACE_KEYS[FaceCategory.THINKING]}{random.randint(1, FACE_COUNT_THINKING)}"
   elif category == FaceCategory.SPEAKING:
