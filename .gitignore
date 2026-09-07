@@ -4,6 +4,7 @@
 # Knowledge base
 database/*
 !database/put_database_data_here
+!database/i_am_robot.md
 
 # Database
 chroma/db/*
