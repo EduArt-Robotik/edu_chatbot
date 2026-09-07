@@ -138,15 +138,12 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
       - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
     command: ["ros2", "run", "edu_chatbot_wakeword", "edu_chatbot_wakeword_node", "--ros-args", "--log-level", "info"]
-    #command: ["/bin/bash"]
-    #stdin_open: true
-    #tty: true
-    # healthcheck:
-    #   test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action info /whisper/listen 2>/dev/null | grep -q \"Action servers: [1-9]\"'"]
-    #   interval: 5s
-    #   timeout: 5s
-    #   retries: 5
-    #   start_period: 300s
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 topic info /wakeword/trigger 2>/dev/null | grep -q \"Publisher count: [1-9]\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
 
   edu-chatbot-stt:
     build:
@@ -175,7 +172,7 @@ services:
     ]
     depends_on:
       edu-chatbot-wakeword:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action info /whisper/listen 2>/dev/null | grep -q \"Action servers: [1-9]\"'"]
       interval: 5s
