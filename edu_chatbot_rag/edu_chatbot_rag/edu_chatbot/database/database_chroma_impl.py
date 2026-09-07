@@ -54,7 +54,7 @@ class ChromaDatabase(DatabaseIface):
       logger.debug(f'Collection "{collection_name}" found.')
     except Exception:
       logger.debug(f'Collection "{collection_name}" not found. Creating new collection.')
-      collection = self.client.create_collection(name=collection_name)
+      collection = self.client.create_collection(name=collection_name, metadata={"hnsw:space": "cosine"})
     return collection
 
   def store(self, entries: list[DatabaseEntry]) -> None:
@@ -81,7 +81,8 @@ class ChromaDatabase(DatabaseIface):
       distance = results['distances'][0][i]
       score = 1.0 - distance
 
-      logger.debug(f"Retrieved chunk {results['ids'][0][i]}: "f"distance={distance:.4f}, score={score:.4f}")
+      logger.debug(f"Retrieved chunk {results['ids'][0][i]}: "f"distance={distance:.4f}, score={score:.4f}:")
+      logger.debug(f"Document: {results['documents'][0][i]}")
       if score < relevance_threshold:
         continue
 

@@ -83,7 +83,7 @@ services:
     volumes:
       - ./database:/home/user/database
       - database-cache:/home/user/data
-    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_database_update_node", "--ros-args", "-p", "wipe_database:=true", "-p", "chunk_size:=512", "-p", "chunk_overlap:=128", "--ros-args", "--log-level", "info"]
+    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_database_update_node", "--ros-args", "-p", "wipe_database:=true", "-p", "chunk_size:=256", "-p", "chunk_overlap:=64", "--ros-args", "--log-level", "info"]
     depends_on:
       edu-chatbot-llm:
         condition: service_healthy
@@ -107,7 +107,7 @@ services:
       - FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros/jazzy/fastdds_no_shm.xml
     volumes:
       - ./docker/fastdds_no_shm.xml:/opt/ros/jazzy/fastdds_no_shm.xml:ro
-    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_rag_node", "--ros-args", "-p", "llm_model:=llama3.2:1b", "-p", "top_k:=3", "-p", "warm_up_pipeline:=true", "-p", "relevance_threshold:=0.06", "-p", "temperature:=0.0", "--ros-args", "--log-level", "debug"]
+    command: ["ros2", "run", "edu_chatbot_rag", "edu_chatbot_rag_node", "--ros-args", "-p", "llm_model:=llama3.2:1b", "-p", "top_k:=3", "-p", "warm_up_pipeline:=true", "-p", "relevance_threshold:=0.5", "-p", "temperature:=0.0", "--ros-args", "--log-level", "debug"]
     stdin_open: true
     tty: true
     depends_on:

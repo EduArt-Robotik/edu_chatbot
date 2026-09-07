@@ -5,7 +5,7 @@ import shutil
 import chromadb
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.ingestion import IngestionPipeline, IngestionCache
-from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
@@ -21,6 +21,8 @@ DEFAULT_INGESTION_CACHE_DIR = os.environ.get('INGESTION_CACHE_PATH', '/home/user
 
 DEFAULT_CHUNK_SIZE = 512
 DEFAULT_CHUNK_OVERLAP = 128
+DEFAULT_SEMANTIC_BREAKPOINT_THRESHOLD = 90
+DEFAULT_SEMANTIC_BUFFER_SIZE = 1
 
 SUPPORTED_EXTENSIONS = [".txt", ".docx", ".pptx", ".md", ".pdf"]
 
@@ -46,7 +48,9 @@ class DatabaseUpdateService:
       chroma_host: str = DEFAULT_CHROMA_HOST,
       chroma_port: int = DEFAULT_CHROMA_PORT,
       chunk_size: int = DEFAULT_CHUNK_SIZE,
-      chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
+      chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+      breakpoint_percentile_threshold: int = DEFAULT_SEMANTIC_BREAKPOINT_THRESHOLD,
+      buffer_size: int = DEFAULT_SEMANTIC_BUFFER_SIZE
   ):
     self._database_path = database_path
     self._collection_name = collection_name
@@ -57,7 +61,7 @@ class DatabaseUpdateService:
     
     # Initialize ChromaDB - connect to remote server
     self._chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
-    self._chroma_collection = self._chroma_client.get_or_create_collection(name=collection_name)
+    self._chroma_collection = self._chroma_client.get_or_create_collection(name=collection_name, metadata={"hnsw:space": "cosine"})
     self._vector_store = ChromaVectorStore(chroma_collection=self._chroma_collection)
     
     # Initialize ingestion pipeline with caching (skips unchanged chunks)
@@ -65,7 +69,15 @@ class DatabaseUpdateService:
     # nodes are added to the vector store in batches in update_database()
     self._pipeline = IngestionPipeline(
       transformations=[
-        SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap),
+        SemanticSplitterNodeParser(
+          embed_model=self._embed_model,
+          buffer_size=buffer_size,
+          breakpoint_percentile_threshold=breakpoint_percentile_threshold,
+        ),
+        SentenceSplitter(
+          chunk_size=chunk_size,
+          chunk_overlap=chunk_overlap,
+        ),
         self._embed_model,
       ],
       cache=IngestionCache(),
@@ -95,7 +107,7 @@ class DatabaseUpdateService:
 
     # Reset Chroma collection.
     self._chroma_client.delete_collection(name=self._collection_name)
-    self._chroma_collection = self._chroma_client.get_or_create_collection(name=self._collection_name)
+    self._chroma_collection = self._chroma_client.get_or_create_collection(name=self._collection_name, metadata={"hnsw:space": "cosine"})
     self._vector_store = ChromaVectorStore(chroma_collection=self._chroma_collection)
 
     # Reset ingestion cache in memory and on disk so all documents are re-embedded.
