@@ -1,8 +1,7 @@
 repositories:
   audio_common:
     type: git
-    url: https://github.com/mgonzs13/audio_common
-    version: 4.0.10
+    url: https://github.com/EduArt-Robotik/audio_common.git
   piper_ros:
     type: git
     url: https://github.com/EduArt-Robotik/piper_ros.git
