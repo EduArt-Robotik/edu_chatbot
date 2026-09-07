@@ -17,7 +17,7 @@ from audio_common_msgs.msg import AudioStamped
 NODE_NAME = 'edu_chatbot_wakeword_node'
 
 DEFAULT_DEBOUNCE_TIME                = 2.0
-DEFAULT_SCORE_THRESHOLD              = 0.04
+DEFAULT_SCORE_THRESHOLD              = 0.05
 DEFAULT_INPUT_TOPIC                  = '/audio/in'
 DEFAULT_OUTPUT_TOPIC                 = '/wakeword/trigger'
 DEFAULT_MODEL_NAME                   = 'hello_robot.onnx'
