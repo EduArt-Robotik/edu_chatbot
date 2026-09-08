@@ -315,8 +315,9 @@ class EduChatbotPipelineManagerNode(Node):
 
   def _state_error(self, error_message: str):
     get_logger().error(f"[State: ERROR] Pipeline failure: {error_message}")
-    # TODO: Maybe inform user that an error occurred (or maybe not, if there are too many errors)
     self.state = ChatbotState.WAITING if self.pipeline_enabled else ChatbotState.OFF
+    time.sleep(10)
+    get_logger().error(f"[State: ERROR] Pipeline returned to waiting state.")
 
   # ---------------------------------------------------------------------------
   # State Machine Execution Loop
@@ -330,8 +331,6 @@ class EduChatbotPipelineManagerNode(Node):
     self.tts_action_client.wait_for_server()
     get_logger().info("[3/3] Connected to TTS Action Server.")
     get_logger().info("All external servers active. Activating pipeline...")
-
-    #TODO: Cancel outstanding actions if pipeline was previously disabled mid-execution
 
     while rclpy.ok():
       if not self.pipeline_enabled:
