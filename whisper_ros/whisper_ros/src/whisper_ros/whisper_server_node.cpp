@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <memory>
+#include <vector>
 
 #include "whisper.h"
 #include "whisper_ros/whisper_server_node.hpp"
@@ -30,6 +31,7 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 WhisperServerNode::WhisperServerNode() : WhisperBaseNode() {
+  this->declare_parameter<bool>("warm_up", true);
   RCLCPP_INFO(this->get_logger(), "WhisperServer node started");
 }
 
@@ -40,6 +42,14 @@ void WhisperServerNode::activate_ros_interfaces() {
   this->subscription_ =
       this->create_subscription<std_msgs::msg::Float32MultiArray>(
           "vad", 10, std::bind(&WhisperServerNode::vad_callback, this, _1));
+
+  bool warm_up;
+  this->get_parameter("warm_up", warm_up);
+  if (warm_up) {
+    RCLCPP_INFO(this->get_logger(), "Warming up Whisper...");
+    this->transcribe(std::vector<float>(WHISPER_SAMPLE_RATE, 0.0f));
+    RCLCPP_INFO(this->get_logger(), "Whisper warm-up completed");
+  }
 
   this->goal_handle_ = nullptr;
   this->action_server_ = rclcpp_action::create_server<STT>(

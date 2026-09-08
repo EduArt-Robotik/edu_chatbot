@@ -2,6 +2,8 @@
 /**:
   whisper_node:
     ros__parameters:
+      warm_up: true
+
       # Model parameters
       model:
         repo: "ggerganov/whisper.cpp"
